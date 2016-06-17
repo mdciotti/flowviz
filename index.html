@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Streamline</title>
+<script src="build/require.js"></script>
+<script src="build/streamline.js"></script>
+<script>
+    requirejs(["main"], function (main) {
+        main.init();
+    });
+</script>
+<!--<script src="old/dat.gui.min.js"></script>-->
+<!--<link href="http://mdc.io/css/experiment.css" rel="stylesheet" type="text/css">-->
+<!--<link href="http://mdc.io/css/dat.gui.mod.css" rel="stylesheet" type="text/css">-->
+<style>
+    canvas { display: block; }
+</style>
+</head>
+<body>
+    <button id="reset">Reset</button>
+    <button id="generate">Generate Streamlines</button>
+    <button id="step">Step</button>
+    <button id="step100">Step 100</button>
+    <button id="view">Set Viewport</button>
+    <button id="reset_view">Reset Viewport</button>
+</body>
+</html>

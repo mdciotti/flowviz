@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "amd",
+        "sourceMap": true,
+        "noImplicitAny": false,
+        "outFile": "build/streamline.js"
+    },
+    "files": [
+        "src/main.ts",
+        "src/Streamline.ts",
+        "src/FieldFeature.ts",
+        "src/Field.ts",
+        "src/Integrator.ts",
+        "src/NDArray.ts",
+        "src/BinGrid.ts",
+        "src/Vec2.ts",
+        "src/AABB.ts",
+        "src/Point.ts",
+        "src/util.ts"
+    ]
+}

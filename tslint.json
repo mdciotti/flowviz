@@ -1,0 +1,9 @@
+{
+  "extends": "tslint:latest",
+  "rules": {
+      "curly": false,
+      "whitespace": ["check-branch", "check-decl", "check-operator", "check-module", "check-separator", "check-type"],
+      "no-trailing-comma": true
+  },
+  "rulesDirectory": []
+}
