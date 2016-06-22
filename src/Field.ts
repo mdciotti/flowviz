@@ -232,43 +232,13 @@ export class FeatureField extends Field implements Differentiable {
 
     constructor(bounds: AABB) {
         super(bounds);
+        this.features = [];
+    }
 
-        // Define field features
-        let ccw1 = new FieldFeature(-125, -125, 1,
-            function (x: number, y: number, vector: Vec2) {
-                let r = Math.hypot(x, y);
-                let e = Math.exp(r * r / (250 * 250));
-                vector.x = -y / r / e;
-                vector.y = x / r / e;
-            }
-        );
-        let ccw2 = new FieldFeature(125, 125, 1,
-            function (x: number, y: number, vector: Vec2) {
-                let r = Math.hypot(x, y);
-                let e = Math.exp(r * r / (250 * 250));
-                vector.x = -y / r / e;
-                vector.y = x / r / e;
-            }
-        );
-        let sin = new FieldFeature(0, 0, 0.5,
-            function (x: number, y: number, vector: Vec2) {
-                vector.x = 1;
-                vector.y = Math.sin(x / 10);
-            }
-        );
-        let suck = new FieldFeature(125, -125, 0.5,
-            function (x: number, y: number, vector: Vec2) {
-                let r = Math.hypot(x, y);
-                // let e = Math.exp(r * r / (250 * 250));
-                let e = 1;
-                vector.x = -x / r / e;
-                vector.y = -y / r / e;
-            }
-        );
-
-        this.features = [ccw1, ccw2, sin];
-        // this.features = [ccw1, ccw2];
-        // this.features = [suck];
+    public addFeatures(...features: FieldFeature[]) {
+        for (let f of features) {
+            this.features.push(f);
+        }
     }
 
     /**
@@ -279,13 +249,7 @@ export class FeatureField extends Field implements Differentiable {
      */
     public vec_at(x: number, y: number, vector?: Vec2): Vec2 {
         if (!vector) vector = new Vec2(0, 0);
-        // TODO: write barycentric interpolator for vector mesh
-        // vector.set(1, Math.sin(x/10));
-        // vector.set(Math.sin(y), Math.sin(x));
-        // vector.set(Math.cos(x*x + y), x - y*y + 1);
-
-        vector.x = 0;
-        vector.y = 0;
+        Vec2.zero(vector);
         this.features.forEach((f) => {
             Vec2.add(vector, vector, f.getVelocity(x, y));
         });
@@ -300,6 +264,7 @@ export class MeshField extends Field implements Differentiable {
     }
     public vec_at(x: number, y: number, vector?: Vec2): Vec2 {
         if (!vector) vector = new Vec2(0, 0);
+        // TODO: write barycentric interpolator for vector mesh
         return vector;
     }
 }

@@ -1,110 +1,73 @@
-import { mapRange } from "util"
-import Point from "Point"
-import { FeatureField } from "Field"
-import AABB from "AABB"
+import FieldVisualizer from "./FieldVisualizer"
+import { Field, FeatureField } from "./Field"
+import FieldFeature from "./FieldFeature"
+import AABB from "./AABB"
+import Vec2 from "./Vec2"
 
-function toWorldX(x, canvas, bounds) {
-    return mapRange(x, canvas.offsetLeft, canvas.width, bounds.x - bounds.width / 2, bounds.width);
-}
 
-function toWorldY(y, canvas, bounds) {
-    return mapRange(canvas.height - y, -canvas.offsetTop, canvas.height, bounds.y - bounds.height / 2, bounds.height);
-}
+// Define field features
+let ccw1 = new FieldFeature(-125, -125, 1,
+    function (x: number, y: number, vector: Vec2) {
+        let r = Math.hypot(x, y);
+        let e = Math.exp(r * r / (250 * 250));
+        vector.x = -y / r / e;
+        vector.y = x / r / e;
+    }
+);
+let ccw2 = new FieldFeature(125, 125, 1,
+    function (x: number, y: number, vector: Vec2) {
+        let r = Math.hypot(x, y);
+        let e = Math.exp(r * r / (250 * 250));
+        vector.x = -y / r / e;
+        vector.y = x / r / e;
+    }
+);
+let sin = new FieldFeature(0, 0, 0.5,
+    function (x: number, y: number, vector: Vec2) {
+        vector.x = 1;
+        vector.y = Math.sin(x / 10);
+    }
+);
+let suck = new FieldFeature(125, -125, 0.5,
+    function (x: number, y: number, vector: Vec2) {
+        let r = Math.hypot(x, y);
+        // let e = Math.exp(r * r / (250 * 250));
+        let e = 1;
+        vector.x = -x / r / e;
+        vector.y = -y / r / e;
+    }
+);
+let example = new FieldFeature(0, 0, 1,
+    function (x: number, y: number, vector: Vec2) {
+        let xy = (x * x + y * y) / (100 * 100);
+        vector.x = Math.sin(xy);
+        vector.y = Math.cos(xy);
+    }
+);
+let discontinuous = new FieldFeature(0, 0, 1,
+    function (x: number, y: number, vector: Vec2) {
+        y /= 100;
+        vector.x = 1;
+        vector.y = Math.pow(3, 2 / y);
+    }
+);
 
 export function init() {
-    let bounds = new AABB(0, 0, 500, 500);
-    // let bounds = new AABB(-32, -32, 64, 64);
+    let viz: FieldVisualizer;
+    let bounds: AABB;
 
-    // Set up canvas for drawing
-    let canvas = document.createElement("canvas");
-    canvas.width = 500;
-    canvas.height = 500;
-    document.body.appendChild(canvas);
-    let ctx = canvas.getContext("2d");
-    // ctx.translate(canvas.width / 2, canvas.height / 2);
-    // ctx.scale(1, -1);
-    // ctx.fillRect(0, 0, 10, 10);
+    let f = new FeatureField(new AABB(0, 0, 500, 500));
+    // f.addFeatures(ccw1, ccw2, sin);
+    // f.addFeatures(ccw1, ccw2);
+    // f.addFeatures(suck);
+    // f.addFeatures(example);
+    f.addFeatures(discontinuous);
+    viz = new FieldVisualizer(f);
 
-    // Create field and draw
-    let f = new FeatureField(bounds);
-    console.log(f);
-    f.draw(ctx);
-
-    let mousedown = false;
-    let dragging = false;
-    let dx = 0;
-    let dy = 0;
-    let startX = 0;
-    let startY = 0;
-    let endX = 0;
-    let endY = 0;
-
-    // canvas.addEventListener("mousemove", (ev) => {
-    //     dx = ev.movementX;
-    //     dy = ev.movementY;
-    //     if (mousedown) {
-    //         dragging = true;
-    //         endX = ev.pageX - canvas.offsetLeft;
-    //         endY = ev.pageY - canvas.offsetTop;
-    //         f.draw(ctx);
-    //         ctx.strokeRect(startX, startY, endX - startX, endY - startY);
-    //     } else {
-    //         dragging = false;
-    //     }
-    // });
-    canvas.addEventListener("mousedown", (ev) => {
-        mousedown = true;
-        startX = ev.pageX - canvas.offsetLeft;
-        startY = ev.pageY - canvas.offsetTop;
-    });
-    canvas.addEventListener("mouseup", (ev) => {
-        mousedown = false;
-        console.log(dragging);
-        if (!dragging) {
-            let x = toWorldX(ev.pageX, canvas, f.bounds);
-            let y = toWorldY(ev.pageY, canvas, f.bounds);
-
-            // Create seed point
-            f.addSeed(new Point(x, y));
-            f.draw(ctx);
-        }
-
-        dragging = false;
-        endX = ev.pageX - canvas.offsetLeft;
-        endY = ev.pageY - canvas.offsetTop;
-    });
-
-    document.getElementById("view").addEventListener("click", (ev) => {
-        let w = endX - startX;
-        let h = endY - startY;
-        f.setBounds(new AABB(startX - w / 2, startY - h / 2, w, h));
-        f.draw(ctx);
-    });
-
-    document.getElementById("generate").addEventListener("click", (ev) => {
-        f.generateStreamlines();
-        f.draw(ctx);
-    });
-
-    document.getElementById("reset").addEventListener("click", (ev) => {
-        f.reset();
-        f.draw(ctx);
-    });
-
-    document.getElementById("reset_view").addEventListener("click", (ev) => {
-        f.setBounds(bounds);
-        f.draw(ctx);
-    });
-
-    document.getElementById("step100").addEventListener("click", (ev) => {
-        for (let i = 0; i < 100; i++) {
-            f.step();
-        }
-        f.draw(ctx);
-    });
-
-    document.getElementById("step").addEventListener("click", (ev) => {
-        f.step();
-        f.draw(ctx);
-    });
+    document.getElementById("view").addEventListener("click", viz.setViewBounds);
+    document.getElementById("generate").addEventListener("click", viz.generateStreamlines);
+    document.getElementById("reset").addEventListener("click", viz.clear);
+    document.getElementById("reset_view").addEventListener("click", viz.reset);
+    document.getElementById("step100").addEventListener("click", viz.stepn(100));
+    document.getElementById("step").addEventListener("click", viz.stepn(1));
 }

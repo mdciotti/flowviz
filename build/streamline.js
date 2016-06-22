@@ -1,18 +1,3 @@
-define("util", ["require", "exports"], function (require, exports) {
-    "use strict";
-    function lerp(x0, x1, t) {
-        return (1 - t) * x0 + t * x1;
-    }
-    exports.lerp = lerp;
-    function clamp(min, max, x) {
-        return x > min ? (x < max ? x : max) : min;
-    }
-    exports.clamp = clamp;
-    function mapRange(x, x0, xw, y0, yw) {
-        return (x - x0) / xw * yw + y0;
-    }
-    exports.mapRange = mapRange;
-});
 define("Vec2", ["require", "exports"], function (require, exports) {
     "use strict";
     /**
@@ -616,6 +601,21 @@ define("BinGrid", ["require", "exports", "AABB", "NDArray"], function (require, 
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = BinGrid;
 });
+define("util", ["require", "exports"], function (require, exports) {
+    "use strict";
+    function lerp(x0, x1, t) {
+        return (1 - t) * x0 + t * x1;
+    }
+    exports.lerp = lerp;
+    function clamp(min, max, x) {
+        return x > min ? (x < max ? x : max) : min;
+    }
+    exports.clamp = clamp;
+    function mapRange(x, x0, xw, y0, yw) {
+        return (x - x0) / xw * yw + y0;
+    }
+    exports.mapRange = mapRange;
+});
 define("FieldFeature", ["require", "exports", "Vec2"], function (require, exports, Vec2_3) {
     "use strict";
     class FieldFeature {
@@ -727,7 +727,7 @@ define("Integrator", ["require", "exports", "Vec2", "Point"], function (require,
     }
     exports.Euler = Euler;
 });
-define("Field", ["require", "exports", "BinGrid", "Streamline", "Point", "Vec2", "util", "FieldFeature", "Integrator"], function (require, exports, BinGrid_1, Streamline_1, Point_4, Vec2_5, util_1, FieldFeature_1, Integrator_1) {
+define("Field", ["require", "exports", "BinGrid", "Streamline", "Point", "Vec2", "util", "Integrator"], function (require, exports, BinGrid_1, Streamline_1, Point_4, Vec2_5, util_1, Integrator_1) {
     "use strict";
     /**
      * Represents a collection of streamlines in a given vector field.
@@ -878,33 +878,12 @@ define("Field", ["require", "exports", "BinGrid", "Streamline", "Point", "Vec2",
     class FeatureField extends Field {
         constructor(bounds) {
             super(bounds);
-            // Define field features
-            let ccw1 = new FieldFeature_1.default(-125, -125, 1, function (x, y, vector) {
-                let r = Math.hypot(x, y);
-                let e = Math.exp(r * r / (250 * 250));
-                vector.x = -y / r / e;
-                vector.y = x / r / e;
-            });
-            let ccw2 = new FieldFeature_1.default(125, 125, 1, function (x, y, vector) {
-                let r = Math.hypot(x, y);
-                let e = Math.exp(r * r / (250 * 250));
-                vector.x = -y / r / e;
-                vector.y = x / r / e;
-            });
-            let sin = new FieldFeature_1.default(0, 0, 0.5, function (x, y, vector) {
-                vector.x = 1;
-                vector.y = Math.sin(x / 10);
-            });
-            let suck = new FieldFeature_1.default(125, -125, 0.5, function (x, y, vector) {
-                let r = Math.hypot(x, y);
-                // let e = Math.exp(r * r / (250 * 250));
-                let e = 1;
-                vector.x = -x / r / e;
-                vector.y = -y / r / e;
-            });
-            this.features = [ccw1, ccw2, sin];
-            // this.features = [ccw1, ccw2];
-            // this.features = [suck];
+            this.features = [];
+        }
+        addFeatures(...features) {
+            for (let f of features) {
+                this.features.push(f);
+            }
         }
         /**
          * Computes the field vector at the given point.
@@ -915,12 +894,7 @@ define("Field", ["require", "exports", "BinGrid", "Streamline", "Point", "Vec2",
         vec_at(x, y, vector) {
             if (!vector)
                 vector = new Vec2_5.default(0, 0);
-            // TODO: write barycentric interpolator for vector mesh
-            // vector.set(1, Math.sin(x/10));
-            // vector.set(Math.sin(y), Math.sin(x));
-            // vector.set(Math.cos(x*x + y), x - y*y + 1);
-            vector.x = 0;
-            vector.y = 0;
+            Vec2_5.default.zero(vector);
             this.features.forEach((f) => {
                 Vec2_5.default.add(vector, vector, f.getVelocity(x, y));
             });
@@ -936,12 +910,13 @@ define("Field", ["require", "exports", "BinGrid", "Streamline", "Point", "Vec2",
         vec_at(x, y, vector) {
             if (!vector)
                 vector = new Vec2_5.default(0, 0);
+            // TODO: write barycentric interpolator for vector mesh
             return vector;
         }
     }
     exports.MeshField = MeshField;
 });
-define("main", ["require", "exports", "util", "Point", "Field", "AABB"], function (require, exports, util_2, Point_5, Field_2, AABB_2) {
+define("FieldVisualizer", ["require", "exports", "Point", "util", "AABB"], function (require, exports, Point_5, util_2, AABB_2) {
     "use strict";
     function toWorldX(x, canvas, bounds) {
         return util_2.mapRange(x, canvas.offsetLeft, canvas.width, bounds.x - bounds.width / 2, bounds.width);
@@ -949,91 +924,196 @@ define("main", ["require", "exports", "util", "Point", "Field", "AABB"], functio
     function toWorldY(y, canvas, bounds) {
         return util_2.mapRange(canvas.height - y, -canvas.offsetTop, canvas.height, bounds.y - bounds.height / 2, bounds.height);
     }
-    function init() {
-        let bounds = new AABB_2.default(0, 0, 500, 500);
-        // let bounds = new AABB(-32, -32, 64, 64);
-        // Set up canvas for drawing
-        let canvas = document.createElement("canvas");
-        canvas.width = 500;
-        canvas.height = 500;
-        document.body.appendChild(canvas);
-        let ctx = canvas.getContext("2d");
-        // ctx.translate(canvas.width / 2, canvas.height / 2);
-        // ctx.scale(1, -1);
-        // ctx.fillRect(0, 0, 10, 10);
-        // Create field and draw
-        let f = new Field_2.FeatureField(bounds);
-        console.log(f);
-        f.draw(ctx);
-        let mousedown = false;
-        let dragging = false;
-        let dx = 0;
-        let dy = 0;
-        let startX = 0;
-        let startY = 0;
-        let endX = 0;
-        let endY = 0;
-        // canvas.addEventListener("mousemove", (ev) => {
-        //     dx = ev.movementX;
-        //     dy = ev.movementY;
-        //     if (mousedown) {
-        //         dragging = true;
-        //         endX = ev.pageX - canvas.offsetLeft;
-        //         endY = ev.pageY - canvas.offsetTop;
-        //         f.draw(ctx);
-        //         ctx.strokeRect(startX, startY, endX - startX, endY - startY);
-        //     } else {
-        //         dragging = false;
-        //     }
-        // });
-        canvas.addEventListener("mousedown", (ev) => {
-            mousedown = true;
-            startX = ev.pageX - canvas.offsetLeft;
-            startY = ev.pageY - canvas.offsetTop;
-        });
-        canvas.addEventListener("mouseup", (ev) => {
-            mousedown = false;
-            console.log(dragging);
-            if (!dragging) {
-                let x = toWorldX(ev.pageX, canvas, f.bounds);
-                let y = toWorldY(ev.pageY, canvas, f.bounds);
+    class FieldVisualizer {
+        constructor(f) {
+            this.mousedown = false;
+            this.mouseDragging = false;
+            this.mouseStartX = 0;
+            this.mouseStartY = 0;
+            this.mouseEndX = 0;
+            this.mouseEndY = 0;
+            this.mouseDx = 0;
+            this.mouseDy = 0;
+            this.field = f;
+            this.canvas = document.createElement("canvas");
+            this.canvas.width = 500;
+            this.canvas.height = 500;
+            document.body.appendChild(this.canvas);
+            this.ctx = this.canvas.getContext("2d");
+            this.field.draw(this.ctx);
+            this.canvas.addEventListener("mousemove", this.onmousemove.bind(this));
+            this.canvas.addEventListener("mousedown", this.onmousedown.bind(this));
+            this.canvas.addEventListener("mouseup", this.onmouseup.bind(this));
+        }
+        onmousemove(ev) {
+            this.mouseDx = ev.movementX;
+            this.mouseDy = ev.movementY;
+            // if (this.mousedown) {
+            //     this.mouseDragging = true;
+            //     this.mouseEndX = ev.pageX - this.canvas.offsetLeft;
+            //     this.mouseEndY = ev.pageY - this.canvas.offsetTop;
+            //     // this.field.draw(this.ctx);
+            //     this.ctx.strokeRect(this.mouseStartX, this.mouseStartY,
+            //         this.mouseEndX - this.mouseStartX, this.mouseEndY - this.mouseStartY);
+            // } else {
+            //     this.mouseDragging = false;
+            // }
+        }
+        onmousedown(ev) {
+            this.mousedown = true;
+            this.mouseStartX = ev.pageX - this.canvas.offsetLeft;
+            this.mouseStartY = ev.pageY - this.canvas.offsetTop;
+        }
+        onmouseup(ev) {
+            this.mousedown = false;
+            if (!this.mouseDragging) {
+                let x = toWorldX(ev.pageX, this.canvas, this.field.bounds);
+                let y = toWorldY(ev.pageY, this.canvas, this.field.bounds);
                 // Create seed point
-                f.addSeed(new Point_5.default(x, y));
-                f.draw(ctx);
+                this.field.addSeed(new Point_5.default(x, y));
+                this.field.draw(this.ctx);
             }
-            dragging = false;
-            endX = ev.pageX - canvas.offsetLeft;
-            endY = ev.pageY - canvas.offsetTop;
-        });
-        document.getElementById("view").addEventListener("click", (ev) => {
-            let w = endX - startX;
-            let h = endY - startY;
-            f.setBounds(new AABB_2.default(startX - w / 2, startY - h / 2, w, h));
-            f.draw(ctx);
-        });
-        document.getElementById("generate").addEventListener("click", (ev) => {
-            f.generateStreamlines();
-            f.draw(ctx);
-        });
-        document.getElementById("reset").addEventListener("click", (ev) => {
-            f.reset();
-            f.draw(ctx);
-        });
-        document.getElementById("reset_view").addEventListener("click", (ev) => {
-            f.setBounds(bounds);
-            f.draw(ctx);
-        });
-        document.getElementById("step100").addEventListener("click", (ev) => {
-            for (let i = 0; i < 100; i++) {
-                f.step();
-            }
-            f.draw(ctx);
-        });
-        document.getElementById("step").addEventListener("click", (ev) => {
-            f.step();
-            f.draw(ctx);
-        });
+            this.mouseDragging = false;
+            this.mouseEndX = ev.pageX - this.canvas.offsetLeft;
+            this.mouseEndY = ev.pageY - this.canvas.offsetTop;
+        }
+        /**
+         * Update the view bounds from the mouse selection.
+         */
+        setViewBounds() {
+            let w = Math.abs(this.mouseEndX - this.mouseStartX);
+            let h = Math.abs(this.mouseEndY - this.mouseStartY);
+            let cx = this.mouseStartX - w / 2;
+            let cy = this.mouseStartY - h / 2;
+            this.field.setBounds(new AABB_2.default(cx, cy, w, h));
+            this.field.draw(this.ctx);
+        }
+        /**
+         * Generate streamlines for the field.
+         */
+        generateStreamlines() {
+            this.field.generateStreamlines();
+            this.field.draw(this.ctx);
+        }
+        /**
+         * Clears the field while keeping the view unchanged.
+         */
+        clear() {
+            this.field.reset();
+            this.field.draw(this.ctx);
+        }
+        /**
+         * Clears the field and resets the view.
+         */
+        reset() {
+            this.clear();
+            this.field.setBounds(new AABB_2.default(0, 0, 500, 500));
+            this.field.draw(this.ctx);
+        }
+        /**
+         * Returns a function which will call the field's step function n times.
+         */
+        stepn(n) {
+            return () => {
+                for (let i = 0; i < n; i++) {
+                    this.field.step();
+                }
+                this.field.draw(this.ctx);
+            };
+        }
+    }
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.default = FieldVisualizer;
+});
+define("main", ["require", "exports", "FieldVisualizer", "Field", "FieldFeature", "AABB"], function (require, exports, FieldVisualizer_1, Field_2, FieldFeature_1, AABB_3) {
+    "use strict";
+    // Define field features
+    let ccw1 = new FieldFeature_1.default(-125, -125, 1, function (x, y, vector) {
+        let r = Math.hypot(x, y);
+        let e = Math.exp(r * r / (250 * 250));
+        vector.x = -y / r / e;
+        vector.y = x / r / e;
+    });
+    let ccw2 = new FieldFeature_1.default(125, 125, 1, function (x, y, vector) {
+        let r = Math.hypot(x, y);
+        let e = Math.exp(r * r / (250 * 250));
+        vector.x = -y / r / e;
+        vector.y = x / r / e;
+    });
+    let sin = new FieldFeature_1.default(0, 0, 0.5, function (x, y, vector) {
+        vector.x = 1;
+        vector.y = Math.sin(x / 10);
+    });
+    let suck = new FieldFeature_1.default(125, -125, 0.5, function (x, y, vector) {
+        let r = Math.hypot(x, y);
+        // let e = Math.exp(r * r / (250 * 250));
+        let e = 1;
+        vector.x = -x / r / e;
+        vector.y = -y / r / e;
+    });
+    let example = new FieldFeature_1.default(0, 0, 1, function (x, y, vector) {
+        let xy = (x * x + y * y) / (100 * 100);
+        vector.x = Math.sin(xy);
+        vector.y = Math.cos(xy);
+    });
+    let discontinuous = new FieldFeature_1.default(0, 0, 1, function (x, y, vector) {
+        y /= 100;
+        vector.x = 1;
+        vector.y = Math.pow(3, 2 / y);
+    });
+    function init() {
+        let viz;
+        let bounds;
+        let f = new Field_2.FeatureField(new AABB_3.default(0, 0, 500, 500));
+        // f.addFeatures(ccw1, ccw2, sin);
+        // f.addFeatures(ccw1, ccw2);
+        // f.addFeatures(suck);
+        // f.addFeatures(example);
+        f.addFeatures(discontinuous);
+        viz = new FieldVisualizer_1.default(f);
+        document.getElementById("view").addEventListener("click", viz.setViewBounds);
+        document.getElementById("generate").addEventListener("click", viz.generateStreamlines);
+        document.getElementById("reset").addEventListener("click", viz.clear);
+        document.getElementById("reset_view").addEventListener("click", viz.reset);
+        document.getElementById("step100").addEventListener("click", viz.stepn(100));
+        document.getElementById("step").addEventListener("click", viz.stepn(1));
     }
     exports.init = init;
+});
+define("Map2D", ["require", "exports"], function (require, exports) {
+    "use strict";
+    /**
+     * 2D hash map wrapper for built-in Map.
+     */
+    class Map2D {
+        constructor(n) {
+            if (n < 0)
+                throw new RangeError("Invalid hash size");
+            this.size = n;
+            this.data = new Map();
+        }
+        get(i, j) {
+            return this.data.get(this.hash(i, j));
+        }
+        set(i, j, val) {
+            this.data.set(this.hash(i, j), val);
+        }
+        has(i, j) {
+            return this.data.has(this.hash(i, j));
+        }
+        delete(i, j) {
+            this.data.delete(this.hash(i, j));
+        }
+        clear() {
+            this.data.clear();
+        }
+        hash(i, j) {
+            return (i * Map2D.p1 ^ j * Map2D.p2) % this.size;
+        }
+    }
+    Map2D.p1 = 73856093;
+    Map2D.p2 = 83492791;
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.default = Map2D;
 });
 //# sourceMappingURL=streamline.js.map

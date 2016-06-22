@@ -8,6 +8,7 @@
     },
     "files": [
         "src/main.ts",
+        "src/FieldVisualizer.ts",
         "src/Streamline.ts",
         "src/FieldFeature.ts",
         "src/Field.ts",
@@ -17,6 +18,7 @@
         "src/Vec2.ts",
         "src/AABB.ts",
         "src/Point.ts",
-        "src/util.ts"
+        "src/util.ts",
+        "src/Map2D.ts"
     ]
 }
