@@ -218,7 +218,7 @@ export default class BinGrid<T> {
      */
     public clear(): void {
         for (let b of this.bins.data) {
-            b.points = [];
+            b.items = [];
         }
     }
 

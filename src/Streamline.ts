@@ -160,10 +160,10 @@ function LoopDetection(field: Field, p1: Vertex, p0: Vertex, a: Direction): bool
     const cosBeta = Math.cos(field.beta);
 
     for (let cell of bin.neighbors) {
-        if (cell.points.length === 0) continue;
+        if (cell.items.length === 0) continue;
         if (Math.abs(cell.range[(a + 1) / 2] - p0.id) < field.sigma) continue;
 
-        for (let qp of cell.points) {
+        for (let qp of cell.items) {
             let q = <Vertex>qp;
             if (Math.abs(q.id - p0.id) < field.sigma) continue;
             if (Vec2.distance(q, p0) >= field.d_test) continue;
