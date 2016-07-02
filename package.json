@@ -29,6 +29,7 @@
     "url": "https://github.com/mdciotti/streamline/issues"
   },
   "devDependencies": {
+    "@types/dat-gui": "0.5.25-alpha",
     "jspm": "0.16.39"
   },
   "jspm": {

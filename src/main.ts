@@ -57,7 +57,7 @@ export function init() {
     let bounds: AABB;
 
     let f1 = new FeatureField(new AABB(0, 0, 500, 500));
-    f1.addFeatures(ccw1, ccw2, sin);
+    // f1.addFeatures(ccw1, ccw2, sin);
     // f.addFeatures(ccw1, ccw2);
     // f.addFeatures(suck);
     // f.addFeatures(example);

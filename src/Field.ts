@@ -23,7 +23,7 @@ export abstract class Field implements Differentiable {
     public d_test: number;
 
     /** Minimum arc length for a valid streamline */
-    public minStreamlinelength: number;
+    public minStreamlineLength: number;
 
     public minStepLength: number;
 
@@ -59,23 +59,23 @@ export abstract class Field implements Differentiable {
     }
 
     /**
+     * Updates all parameters to values relative to view dimension.
+     */
+    public updateParameters(params: FieldParameters): void {
+        let vdim = Math.min(this.bounds.width, this.bounds.height);
+        this.d_sep = params.d_sep * vdim;
+        this.d_test = params.d_test * vdim;
+        this.candidate_spacing = params.candidate_spacing * vdim;
+        this.minStepLength = 0.0001 * vdim;
+        this.minStreamlineLength = params.min_length * vdim;
+        this.integrator = new RungeKutta4(params.step_size * vdim, this);
+    }
+
+    /**
      * Set up all components that depend on the bounds.
      */
     public setBounds(bounds: AABB): void {
         this.bounds = bounds;
-
-        // Integration step size = 1/100 of view width
-        let s = 0.01 * Math.min(this.bounds.width, this.bounds.height);
-        this.integrator = new RungeKutta4(s, this);
-        // this.integrator = new Euler(s, this);
-
-        let vdim = Math.min(this.bounds.width, this.bounds.height);
-        this.d_sep = 0.02 * vdim;
-        this.d_test = 0.5 * this.d_sep;
-        this.candidate_spacing = 2 * this.d_sep;
-        this.minStepLength = 0.0001 * vdim;
-        this.minStreamlinelength = 0.1 * vdim;
-
         this.binGrid = new BinGrid<Vertex>(this.bounds, 25);
         this.binGrid2 = new BinGrid<Vertex>(this.bounds, 25);
         this.reset();
@@ -86,6 +86,7 @@ export abstract class Field implements Differentiable {
         this.seedQueue = [];
         this.streamlines = [];
         this.binGrid.clear();
+        this.binGrid2.clear();
     }
 
     public abstract vec_at(x: number, y: number, vector?: Vec2): Vec2;
@@ -109,7 +110,7 @@ export abstract class Field implements Differentiable {
             return;
 
         let streamline = new Streamline(seed, this);
-        if (streamline.arcLength < this.minStreamlinelength)
+        if (streamline.arcLength < this.minStreamlineLength)
             return;
 
         this.addStream(streamline);
@@ -138,7 +139,7 @@ export abstract class Field implements Differentiable {
         }
     }
 
-    public draw(ctx: CanvasRenderingContext2D): void {
+    public viewTransform(ctx: CanvasRenderingContext2D): void {
         ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
 
         // Transform to bounds
@@ -147,43 +148,27 @@ export abstract class Field implements Differentiable {
         ctx.translate(-this.bounds.x, -this.bounds.y);
         ctx.lineWidth = this.bounds.width / ctx.canvas.width;
         ctx.font = `${ctx.lineWidth * 12}px sans-serif`;
+    }
 
-        // Background
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(this.bounds.x - this.bounds.width / 2,
-                     this.bounds.y - this.bounds.height / 2,
-                     this.bounds.width,
-                     this.bounds.height);
-
-        // Center
-        // ctx.fillStyle = "#000000";
-        // ctx.fillRect(0, 0, 1, 1);
-
-        // Boundaries
-        this.bounds.draw(ctx);
-
-        // Grid
-        ctx.strokeStyle = "#cccccc";
-        // this.binGrid.draw(ctx);
-
-        // Initial seed
-        if (this.initialSeed) {
-            ctx.fillStyle = "#cc3333";
-            this.initialSeed.draw(ctx, 2.5);
+    public draw(ctx: CanvasRenderingContext2D, opts: FieldOptions): void {
+        if (opts.boundaries) {
+            this.bounds.draw(ctx);
         }
 
-        // Seed candidates
-        ctx.fillStyle = "#3333cc";
-        let radius = 2.5 * this.bounds.width / ctx.canvas.width;
-        for (let sc of this.seedQueue) {
-            sc.draw(ctx, radius);
+        if (opts.seeds) {
+            ctx.fillStyle = "#3333cc";
+            let radius = 2.5 * this.bounds.width / ctx.canvas.width;
+            for (let sc of this.seedQueue) {
+                sc.draw(ctx, radius);
+            }
         }
 
-        // Streamlines
-        ctx.strokeStyle = "#000000";
-        // ctx.lineWidth = 1.0;
-        for (let i = 0; i < this.streamlines.length; i++) {
-            this.streamlines[i].draw(ctx);
+        if (opts.streamlines) {
+            ctx.strokeStyle = "#000000";
+            // ctx.lineWidth = 1.0;
+            for (let i = 0; i < this.streamlines.length; i++) {
+                this.streamlines[i].draw(ctx);
+            }
         }
     }
 
@@ -254,9 +239,20 @@ export class FeatureField extends Field implements Differentiable {
         return vector;
     }
 
-    public draw(ctx: CanvasRenderingContext2D) {
+    public draw(ctx: CanvasRenderingContext2D, opts: FieldOptions) {
         ctx.save();
-        super.draw(ctx);
+        this.viewTransform(ctx);
+        // Background
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(this.bounds.x - this.bounds.width / 2,
+                     this.bounds.y - this.bounds.height / 2,
+                     this.bounds.width,
+                     this.bounds.height);
+        if (opts.bingrid) {
+            ctx.strokeStyle = "#cccccc";
+            this.binGrid.draw(ctx);
+        }
+        super.draw(ctx, opts);
         ctx.restore();
     }
 }
@@ -282,11 +278,43 @@ export class MeshField extends Field implements Differentiable {
         return vector;
     }
 
-    public draw(ctx: CanvasRenderingContext2D) {
+    public draw(ctx: CanvasRenderingContext2D, opts: FieldOptions) {
         ctx.save();
-        super.draw(ctx);
-        // this.mesh.draw(ctx);
+        this.viewTransform(ctx);
+        // Background
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(this.bounds.x - this.bounds.width / 2,
+                     this.bounds.y - this.bounds.height / 2,
+                     this.bounds.width,
+                     this.bounds.height);
+
+        if (opts.bingrid) {
+            ctx.strokeStyle = "#cccccc";
+            // this.binGrid.draw(ctx);
+            this.mesh.bingrid.draw(ctx, true);
+        }
+        if (opts.mesh) this.mesh.draw(ctx);
+        super.draw(ctx, opts);
         ctx.restore();
     }
 }
 
+export interface FieldParameters {
+    d_sep: number;
+    d_test: number;
+    candidate_spacing: number;
+    step_size: number;
+    min_length: number;
+    // alpha: number;
+    // beta: number;
+    // sigma: number;
+};
+
+export interface FieldOptions {
+    features: boolean;
+    mesh: boolean;
+    seeds: boolean;
+    bingrid: boolean;
+    streamlines: boolean;
+    boundaries: boolean;
+}

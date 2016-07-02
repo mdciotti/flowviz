@@ -1,4 +1,6 @@
-import { Field, MeshField } from "./Field.ts";
+/// <reference path="../node_modules/@types/dat-gui/index.d.ts" />
+
+import { Field, MeshField, FieldOptions, FieldParameters } from "./Field.ts";
 import Point from "./Point.ts";
 import { mapRange } from "./util.ts";
 import AABB from "./AABB.ts";
@@ -26,9 +28,28 @@ export default class FieldVisualizer {
     private mouseEndY = 0;
     private mouseDx = 0;
     private mouseDy = 0;
+    private gui: dat.GUI;
+
+    public viewOptions: FieldOptions = {
+        features: true,
+        mesh: true,
+        seeds: true,
+        bingrid: true,
+        streamlines: true,
+        boundaries: true
+    };
+
+    public parameters: FieldParameters = {
+        d_sep: 0.02,
+        d_test: 0.01,
+        candidate_spacing: 0.04,
+        step_size: 0.01,
+        min_length: 0.1
+    };
 
     constructor(f: Field) {
         this.field = f;
+        this.field.updateParameters(this.parameters);
         this.el = document.createElement("div");
         this.el.classList.add("flowviz");
         this.canvas = document.createElement("canvas");
@@ -36,54 +57,53 @@ export default class FieldVisualizer {
         this.canvas.height = 500;
         this.el.appendChild(this.canvas);
         this.ctx = this.canvas.getContext("2d");
-        this.field.draw(this.ctx);
+        this.gui = new dat.GUI({autoPlace: false});
+        this.el.appendChild(this.gui.domElement);
 
         this.canvas.addEventListener("mousemove", this.onmousemove.bind(this));
         this.canvas.addEventListener("mousedown", this.onmousedown.bind(this));
         this.canvas.addEventListener("mouseup", this.onmouseup.bind(this));
 
-        // Create controls
-        let $viewBtn = document.createElement("button");
-        $viewBtn.innerHTML = "view";
-        $viewBtn.addEventListener("click", this.setViewBounds.bind(this));
-        this.el.appendChild($viewBtn);
+        let toggles = this.gui.addFolder("Show/Hide");
+        toggles.open();
+        toggles.add(this.viewOptions, "features").onFinishChange(this.draw.bind(this));
+        toggles.add(this.viewOptions, "mesh").onFinishChange(this.draw.bind(this));
+        toggles.add(this.viewOptions, "seeds").onFinishChange(this.draw.bind(this));
+        toggles.add(this.viewOptions, "bingrid").onFinishChange(this.draw.bind(this));
+        toggles.add(this.viewOptions, "streamlines").onFinishChange(this.draw.bind(this));
+        toggles.add(this.viewOptions, "boundaries").onFinishChange(this.draw.bind(this));
+        let params = this.gui.addFolder("Parameters");
+        params.open();
+        let update = () => this.field.updateParameters(this.parameters);
+        params.add(this.parameters, "d_sep", 0, 0.1).onFinishChange(update);
+        params.add(this.parameters, "d_test", 0, 0.1).onFinishChange(update);
+        params.add(this.parameters, "min_length", 0, 1).onFinishChange(update);
+        params.add(this.parameters, "candidate_spacing", 0, 0.2).onFinishChange(update);
+        // this.gui.add(this, "setViewBounds");
+        // this.gui.add(this, "reset");
+        this.step = this.stepn(1);
+        this.step100 = this.stepn(100);
+        this.gui.add(this, "step");
+        this.gui.add(this, "step100").name("step x100");
+        this.gui.add(this, "generateStreamlines").name("generate streamlines");
+        this.gui.add(this, "clear").name("clear streamlines");
+        this.gui.add(this, "draw");
 
-        let $generateBtn = document.createElement("button");
-        $generateBtn.innerHTML = "generate";
-        $generateBtn.addEventListener("click", this.generateStreamlines.bind(this));
-        this.el.appendChild($generateBtn);
-        
-        let $clearBtn = document.createElement("button");
-        $clearBtn.innerHTML = "clear";
-        $clearBtn.addEventListener("click", this.clear.bind(this));
-        this.el.appendChild($clearBtn);
+        // this.$file = document.createElement("input");
+        // this.$file.type = "file";
+        // this.$file.multiple = true;
+        // this.$file.addEventListener("onchange", this.stepn(1).bind(this));
+        // this.el.appendChild(this.$file);
 
-        let $resetBtn = document.createElement("button");
-        $resetBtn.innerHTML = "reset";
-        $resetBtn.addEventListener("click", this.reset.bind(this));
-        this.el.appendChild($resetBtn);
-
-        let $step100Btn = document.createElement("button");
-        $step100Btn.innerHTML = "step 100";
-        $step100Btn.addEventListener("click", this.stepn(100).bind(this));
-        this.el.appendChild($step100Btn);
-
-        let $stepBtn = document.createElement("button");
-        $stepBtn.innerHTML = "step";
-        $stepBtn.addEventListener("click", this.stepn(1).bind(this));
-        this.el.appendChild($stepBtn);
-
-        this.$file = document.createElement("input");
-        this.$file.type = "file";
-        this.$file.multiple = true;
-        this.$file.addEventListener("onchange", this.stepn(1).bind(this));
-        this.el.appendChild(this.$file);
-
-        this.$file.addEventListener('change', this.onfileselect.bind(this), false);
+        // this.$file.addEventListener('change', this.onfileselect.bind(this), false);
         this.el.addEventListener('dragover', this.ondragover.bind(this), false);
         this.el.addEventListener('drop', this.ondrop.bind(this), false);
 
         document.body.appendChild(this.el);
+    }
+
+    public draw() {
+        this.field.draw(this.ctx, this.viewOptions);
     }
 
     public ondragover(ev) {
@@ -130,7 +150,8 @@ export default class FieldVisualizer {
             return (e) => {
                 let vm = new VectorMesh(e.target.result);
                 this.field = new MeshField(new AABB(0.5, 0.5, 1, 1), vm);
-                this.field.draw(this.ctx);
+                this.field.updateParameters(this.parameters);
+                this.draw();
             };
         })(file);
         reader.readAsArrayBuffer(file);
@@ -151,25 +172,25 @@ export default class FieldVisualizer {
         // }
     }
 
-    public onmousedown(ev) {
+    public onmousedown(ev: MouseEvent) {
         this.mousedown = true;
         this.mouseStartX = ev.pageX - this.canvas.offsetLeft;
         this.mouseStartY = ev.pageY - this.canvas.offsetTop;
     }
 
-    public onmouseup(ev) {
+    public onmouseup(ev: MouseEvent) {
         this.mousedown = false;
-        if (!this.mouseDragging) {
+        if (!this.mouseDragging && ev.button == 0) {
             let x = toWorldX(ev.pageX, this.canvas, this.field.bounds);
             let y = toWorldY(ev.pageY, this.canvas, this.field.bounds);
 
             // Create seed point
             let p = new Point(x, y);
             this.field.addSeed(p);
-            this.field.draw(this.ctx);
-            let b = this.field.mesh.bingrid.getBinAt(p);
-            console.log(b, b.items.map((f)=>f.id));
-            console.log(this.field.mesh.getFaceAt(x, y).id);
+            this.draw()
+            // let b = this.field.mesh.bingrid.getBinAt(p);
+            // console.log(b, b.items.map((f)=>f.id));
+            // console.log(this.field.mesh.getFaceAt(x, y).id);
         }
 
         this.mouseDragging = false;
@@ -186,7 +207,8 @@ export default class FieldVisualizer {
         let cx = this.mouseStartX - w / 2;
         let cy = this.mouseStartY - h / 2;
         this.field.setBounds(new AABB(cx, cy, w, h));
-        this.field.draw(this.ctx);
+        this.field.updateParameters(this.parameters);
+        this.draw();
     }
 
     /**
@@ -194,7 +216,7 @@ export default class FieldVisualizer {
      */
     public generateStreamlines() {
         this.field.generateStreamlines();
-        this.field.draw(this.ctx);
+        this.draw();
     }
 
     /**
@@ -202,7 +224,7 @@ export default class FieldVisualizer {
      */
     public clear() {
         this.field.reset();
-        this.field.draw(this.ctx);
+        this.draw();
     }
 
     /**
@@ -211,7 +233,7 @@ export default class FieldVisualizer {
     public reset() {
         this.clear();
         this.field.setBounds(new AABB(0, 0, 500, 500));
-        this.field.draw(this.ctx);
+        this.draw();
     }
 
     /**
@@ -222,7 +244,7 @@ export default class FieldVisualizer {
             for (let i = 0; i < n; i++) {
                 this.field.step();
             }
-            this.field.draw(this.ctx);
+            this.draw();
         }
     }
 }

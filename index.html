@@ -6,6 +6,7 @@
 <script src="/jspm_packages/system.js"></script>
 <script src="/node_modules/typescript/lib/typescript.js"></script>
 <script src="config.js"></script>
+<script src="/lib/dat.gui.min.js"></script>
 <script>
 // System.import('parse-ply').then(function(parse) {
 //     console.log(parse);
@@ -20,11 +21,18 @@ System
 <!--<link href="http://mdc.io/css/experiment.css" rel="stylesheet" type="text/css">-->
 <!--<link href="http://mdc.io/css/dat.gui.mod.css" rel="stylesheet" type="text/css">-->
 <style>
+    body { margin: 0; }
     canvas { display: block; }
     .flowviz {
-        border: 2px solid #888888;
-        padding: 32px;
-        margin: 32px;
+        position: relative;
+        display: flex;
+    }
+    .flowviz .dg.main {
+        flex: 1 0 auto;
+        position: relative;
+    }
+    .flowviz .dg.main .close-button {
+        width: 100% !important;
     }
     .flowviz.dragover {
         border: 2px solid #33cc33;
