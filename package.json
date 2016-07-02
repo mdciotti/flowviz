@@ -1,0 +1,44 @@
+{
+  "name": "streamline",
+  "version": "0.1.0-alpha",
+  "description": "Streamline is a vector field visualizer.",
+  "main": "main.js",
+  "dependencies": {
+    "is-little-endian": "0.0.0",
+    "lite-server": "2.2.2",
+    "parse-ply": "0.1.0",
+    "stream-browserify": "2.0.1",
+    "systemjs": "0.19.31",
+    "through": "2.3.8",
+    "typescript": "1.8.10"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "lite-server",
+    "dev-build": "webpack -d --display-modules --progress",
+    "dist-build": "webpack -p --display-modules --progress"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mdciotti/streamline.git"
+  },
+  "keywords": [],
+  "author": "Maxwell Ciotti <max@mdc.io> (http://www.mdc.io)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mdciotti/streamline/issues"
+  },
+  "devDependencies": {
+    "jspm": "0.16.39"
+  },
+  "jspm": {
+    "dependencies": {
+      "parse-ply": "npm:parse-ply@^0.1.0",
+      "stream-browserify": "npm:stream-browserify@^2.0.1",
+      "through": "npm:through@^2.3.8"
+    },
+    "devDependencies": {
+      "typescript": "npm:typescript@^1.6.2"
+    }
+  }
+}

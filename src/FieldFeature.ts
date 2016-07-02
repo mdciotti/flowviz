@@ -1,4 +1,4 @@
-import Vec2 from "Vec2"
+import Vec2 from "./Vec2.ts";
 
 type VectorField = (x: number, y: number, vector: Vec2) => void;
 

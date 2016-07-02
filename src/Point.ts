@@ -1,4 +1,4 @@
-import Vec2 from "Vec2"
+import Vec2 from "./Vec2.ts";
 
 export default class Point extends Vec2 {
     constructor(public x: number, public y: number) {
