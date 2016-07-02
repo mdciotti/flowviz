@@ -1,11 +1,12 @@
-import AABB from "AABB"
-import BinGrid from "BinGrid"
-import { Streamline, Vertex } from "Streamline"
-import Point from "Point"
-import Vec2 from "Vec2"
-import { lerp } from "util"
-import FieldFeature from "FieldFeature"
-import { Integrator, Differentiable, RungeKutta4 } from "Integrator"
+import AABB from "./AABB.ts";
+import BinGrid from "./BinGrid.ts";
+import { Streamline, Vertex } from "./Streamline.ts";
+import Point from "./Point.ts";
+import Vec2 from "./Vec2.ts";
+import { lerp } from "./util.ts";
+import FieldFeature from "./FieldFeature.ts";
+import VectorMesh from "./VectorMesh.ts";
+import { Integrator, Differentiable, RungeKutta4 } from "./Integrator.ts";
 
 /**
  * Represents a collection of streamlines in a given vector field.
@@ -41,8 +42,8 @@ export abstract class Field implements Differentiable {
 
     public integrator: Integrator;
 
-    public binGrid: BinGrid;
-    public binGrid2: BinGrid;
+    public binGrid: BinGrid<Vertex>;
+    public binGrid2: BinGrid<Vertex>;
 
     /** The collection of streamlines in this vector field */
     private streamlines: Array<Streamline>;
@@ -75,8 +76,8 @@ export abstract class Field implements Differentiable {
         this.minStepLength = 0.0001 * vdim;
         this.minStreamlinelength = 0.1 * vdim;
 
-        this.binGrid = new BinGrid(this.bounds, 25);
-        this.binGrid2 = new BinGrid(this.bounds, 25);
+        this.binGrid = new BinGrid<Vertex>(this.bounds, 25);
+        this.binGrid2 = new BinGrid<Vertex>(this.bounds, 25);
         this.reset();
     }
 
@@ -137,9 +138,7 @@ export abstract class Field implements Differentiable {
         }
     }
 
-
     public draw(ctx: CanvasRenderingContext2D): void {
-        ctx.save();
         ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
 
         // Transform to bounds
@@ -147,6 +146,7 @@ export abstract class Field implements Differentiable {
                   -ctx.canvas.height / this.bounds.height);
         ctx.translate(-this.bounds.x, -this.bounds.y);
         ctx.lineWidth = this.bounds.width / ctx.canvas.width;
+        ctx.font = `${ctx.lineWidth * 12}px sans-serif`;
 
         // Background
         ctx.fillStyle = "#ffffff";
@@ -164,7 +164,7 @@ export abstract class Field implements Differentiable {
 
         // Grid
         ctx.strokeStyle = "#cccccc";
-        this.binGrid.draw(ctx);
+        // this.binGrid.draw(ctx);
 
         // Initial seed
         if (this.initialSeed) {
@@ -185,8 +185,6 @@ export abstract class Field implements Differentiable {
         for (let i = 0; i < this.streamlines.length; i++) {
             this.streamlines[i].draw(ctx);
         }
-
-        ctx.restore();
     }
 
     private generateCandidates(streamline: Streamline): void {
@@ -255,17 +253,40 @@ export class FeatureField extends Field implements Differentiable {
         });
         return vector;
     }
+
+    public draw(ctx: CanvasRenderingContext2D) {
+        ctx.save();
+        super.draw(ctx);
+        ctx.restore();
+    }
 }
 
 export class MeshField extends Field implements Differentiable {
-    // private mesh: VectorMesh;
-    constructor(bounds: AABB) {
+    private mesh: VectorMesh;
+
+    constructor(bounds: AABB, mesh: VectorMesh) {
         super(bounds);
+        this.mesh = mesh;
+        // this.mesh.loadASCII("data/test.ply");
     }
+
     public vec_at(x: number, y: number, vector?: Vec2): Vec2 {
         if (!vector) vector = new Vec2(0, 0);
-        // TODO: write barycentric interpolator for vector mesh
+        let face = this.mesh.getFaceAt(x, y);
+        if (face === null) {
+            vector.x = 0;
+            vector.y = 0;
+        } else {
+            face.interpolate(vector, new Vec2(x, y));
+        }
         return vector;
+    }
+
+    public draw(ctx: CanvasRenderingContext2D) {
+        ctx.save();
+        super.draw(ctx);
+        // this.mesh.draw(ctx);
+        ctx.restore();
     }
 }
 

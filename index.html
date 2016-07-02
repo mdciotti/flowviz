@@ -3,26 +3,35 @@
 <head>
 <meta charset="utf-8">
 <title>Streamline</title>
-<script src="build/require.js"></script>
-<script src="build/streamline.js"></script>
+<script src="/jspm_packages/system.js"></script>
+<script src="/node_modules/typescript/lib/typescript.js"></script>
+<script src="config.js"></script>
 <script>
-    requirejs(["main"], function (main) {
+// System.import('parse-ply').then(function(parse) {
+//     console.log(parse);
+// });
+System
+    .import('src/main')
+    .then(function (main) {
         main.init();
-    });
+    }, console.error.bind(console));
 </script>
 <!--<script src="old/dat.gui.min.js"></script>-->
 <!--<link href="http://mdc.io/css/experiment.css" rel="stylesheet" type="text/css">-->
 <!--<link href="http://mdc.io/css/dat.gui.mod.css" rel="stylesheet" type="text/css">-->
 <style>
     canvas { display: block; }
+    .flowviz {
+        border: 2px solid #888888;
+        padding: 32px;
+        margin: 32px;
+    }
+    .flowviz.dragover {
+        border: 2px solid #33cc33;
+        background: #eeeeee;
+    }
 </style>
 </head>
 <body>
-    <button id="reset">Reset</button>
-    <button id="generate">Generate Streamlines</button>
-    <button id="step">Step</button>
-    <button id="step100">Step 100</button>
-    <button id="view">Set Viewport</button>
-    <button id="reset_view">Reset Viewport</button>
 </body>
 </html>

@@ -2,10 +2,12 @@
 
 - [x] Viewbox
 - [ ] Line sample density control (adaptive sample distance)
-- [ ] Barycentric vector mesh interpolator
+- [x] Barycentric vector mesh interpolator
+- [x] Load vector mesh (PLY)
 - [ ] Boundary clipping (?)
 - [x] Loop detection
 - [ ] Unsteady flow
+- [ ] Tapering effect
 
 
 

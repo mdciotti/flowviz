@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "target": "es6",
-        "module": "amd",
+        "module": "system",
         "sourceMap": true,
         "noImplicitAny": false,
         "outFile": "build/streamline.js"

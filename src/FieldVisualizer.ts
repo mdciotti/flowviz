@@ -1,7 +1,8 @@
-import { Field } from "./Field"
-import Point from "./Point"
-import { mapRange } from "./util"
-import AABB from "./AABB"
+import { Field, MeshField } from "./Field.ts";
+import Point from "./Point.ts";
+import { mapRange } from "./util.ts";
+import AABB from "./AABB.ts";
+import VectorMesh from "./VectorMesh.ts";
 
 function toWorldX(x, canvas, bounds) {
     return mapRange(x, canvas.offsetLeft, canvas.width, bounds.x - bounds.width / 2, bounds.width);
@@ -14,6 +15,8 @@ function toWorldY(y, canvas, bounds) {
 export default class FieldVisualizer {
     public field: Field;
     public canvas: HTMLCanvasElement;
+    public el: HTMLDivElement;
+    private $file: HTMLInputElement;
     public ctx: CanvasRenderingContext2D;
     private mousedown = false;
     private mouseDragging = false;
@@ -26,16 +29,111 @@ export default class FieldVisualizer {
 
     constructor(f: Field) {
         this.field = f;
+        this.el = document.createElement("div");
+        this.el.classList.add("flowviz");
         this.canvas = document.createElement("canvas");
         this.canvas.width = 500;
         this.canvas.height = 500;
-        document.body.appendChild(this.canvas);
+        this.el.appendChild(this.canvas);
         this.ctx = this.canvas.getContext("2d");
         this.field.draw(this.ctx);
 
         this.canvas.addEventListener("mousemove", this.onmousemove.bind(this));
         this.canvas.addEventListener("mousedown", this.onmousedown.bind(this));
         this.canvas.addEventListener("mouseup", this.onmouseup.bind(this));
+
+        // Create controls
+        let $viewBtn = document.createElement("button");
+        $viewBtn.innerHTML = "view";
+        $viewBtn.addEventListener("click", this.setViewBounds.bind(this));
+        this.el.appendChild($viewBtn);
+
+        let $generateBtn = document.createElement("button");
+        $generateBtn.innerHTML = "generate";
+        $generateBtn.addEventListener("click", this.generateStreamlines.bind(this));
+        this.el.appendChild($generateBtn);
+        
+        let $clearBtn = document.createElement("button");
+        $clearBtn.innerHTML = "clear";
+        $clearBtn.addEventListener("click", this.clear.bind(this));
+        this.el.appendChild($clearBtn);
+
+        let $resetBtn = document.createElement("button");
+        $resetBtn.innerHTML = "reset";
+        $resetBtn.addEventListener("click", this.reset.bind(this));
+        this.el.appendChild($resetBtn);
+
+        let $step100Btn = document.createElement("button");
+        $step100Btn.innerHTML = "step 100";
+        $step100Btn.addEventListener("click", this.stepn(100).bind(this));
+        this.el.appendChild($step100Btn);
+
+        let $stepBtn = document.createElement("button");
+        $stepBtn.innerHTML = "step";
+        $stepBtn.addEventListener("click", this.stepn(1).bind(this));
+        this.el.appendChild($stepBtn);
+
+        this.$file = document.createElement("input");
+        this.$file.type = "file";
+        this.$file.multiple = true;
+        this.$file.addEventListener("onchange", this.stepn(1).bind(this));
+        this.el.appendChild(this.$file);
+
+        this.$file.addEventListener('change', this.onfileselect.bind(this), false);
+        this.el.addEventListener('dragover', this.ondragover.bind(this), false);
+        this.el.addEventListener('drop', this.ondrop.bind(this), false);
+
+        document.body.appendChild(this.el);
+    }
+
+    public ondragover(ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        // Explicitly show this is a copy.
+        ev.dataTransfer.dropEffect = 'copy';
+        this.el.classList.add('dragover');
+    }
+
+    public onfileselect(ev: Event) {
+        ev.stopPropagation();
+        ev.preventDefault();
+
+        let files = this.$file.files;
+
+        for (let i = 0, f; f = files[i]; i++) {
+            this.loadFile(f);
+        }
+    }
+
+    public ondrop(ev: DragEvent) {
+        this.el.classList.remove('dragover');
+
+        ev.stopPropagation();
+        ev.preventDefault();
+
+        let files = ev.dataTransfer.files;
+
+        for (let i = 0, f; f = files[i]; i++) {
+            this.loadFile(f);
+        }
+    }
+
+    public loadFile(file: File) {
+        // console.log(f.type);
+        // Only process PLY files.
+        // if (!f.type.match('image.*')) {
+        //     continue;
+        // }
+        // console.log('loading file', file);
+        let reader = new FileReader();
+        reader.onload = ((f) => {
+            return (e) => {
+                let vm = new VectorMesh(e.target.result);
+                this.field = new MeshField(new AABB(0.5, 0.5, 1, 1), vm);
+                this.field.draw(this.ctx);
+            };
+        })(file);
+        reader.readAsArrayBuffer(file);
     }
 
     public onmousemove(ev) {
@@ -66,8 +164,12 @@ export default class FieldVisualizer {
             let y = toWorldY(ev.pageY, this.canvas, this.field.bounds);
 
             // Create seed point
-            this.field.addSeed(new Point(x, y));
+            let p = new Point(x, y);
+            this.field.addSeed(p);
             this.field.draw(this.ctx);
+            let b = this.field.mesh.bingrid.getBinAt(p);
+            console.log(b, b.items.map((f)=>f.id));
+            console.log(this.field.mesh.getFaceAt(x, y).id);
         }
 
         this.mouseDragging = false;
