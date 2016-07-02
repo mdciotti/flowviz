@@ -1,6 +1,6 @@
-/// <reference path="../lib/node.d.ts" />
-/// <reference path="../lib/parse-ply.d.ts" />
-/// <reference path="../lib/through.d.ts" />
+/// <reference path="../typings/node.d.ts" />
+/// <reference path="../typings/parse-ply.d.ts" />
+/// <reference path="../typings/through.d.ts" />
 
 import AABB from "./AABB.ts";
 import Point from "./Point.ts";
