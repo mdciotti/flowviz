@@ -3,7 +3,7 @@ import BinGrid from "./BinGrid.ts";
 import { Streamline, Vertex } from "./Streamline.ts";
 import Point from "./Point.ts";
 import Vec2 from "./Vec2.ts";
-import { lerp } from "./util.ts";
+import { lerp, mapRange } from "./util.ts";
 import FieldFeature from "./FieldFeature.ts";
 import VectorMesh from "./VectorMesh.ts";
 import { Integrator, Differentiable, RungeKutta4 } from "./Integrator.ts";
@@ -51,11 +51,11 @@ export abstract class Field implements Differentiable {
     private seedQueue: Array<Point>;
 
     /** The initial seeding point for the streamline computation */
-    private initialSeed: Point;
+    public initialSeed: Point;
 
     constructor(bounds: AABB) {
+        this.initialSeed = new Point(0, 0);
         this.setBounds(bounds);
-        // this.generate_streamlines();
     }
 
     /**
@@ -69,6 +69,10 @@ export abstract class Field implements Differentiable {
         this.minStepLength = 0.0001 * vdim;
         this.minStreamlineLength = params.min_length * vdim;
         this.integrator = new RungeKutta4(params.step_size * vdim, this);
+
+        this.initialSeed.x = mapRange(params.seed_x, -1, 2, this.bounds.x - this.bounds.width / 2, this.bounds.width);
+        this.initialSeed.y = mapRange(params.seed_y, -1, 2, this.bounds.y - this.bounds.height / 2, this.bounds.height);
+        if (this.seedQueue.length === 0) this.seedQueue.push(this.initialSeed);
     }
 
     /**
@@ -83,7 +87,7 @@ export abstract class Field implements Differentiable {
 
     public reset(): void {
         // Set up variables
-        this.seedQueue = [];
+        this.seedQueue = [this.initialSeed];
         this.streamlines = [];
         this.binGrid.clear();
         this.binGrid2.clear();
@@ -158,6 +162,7 @@ export abstract class Field implements Differentiable {
         if (opts.seeds) {
             ctx.fillStyle = "#3333cc";
             let radius = 2.5 * this.bounds.width / ctx.canvas.width;
+            // if (this.initialSeed) this.initialSeed.draw(ctx, radius);
             for (let sc of this.seedQueue) {
                 sc.draw(ctx, radius);
             }
@@ -166,9 +171,11 @@ export abstract class Field implements Differentiable {
         if (opts.streamlines) {
             ctx.strokeStyle = "#000000";
             // ctx.lineWidth = 1.0;
-            for (let i = 0; i < this.streamlines.length; i++) {
-                this.streamlines[i].draw(ctx);
+            ctx.save();
+            for (let s of this.streamlines) {
+                s.draw(ctx);
             }
+            ctx.restore();
         }
     }
 
@@ -305,6 +312,8 @@ export interface FieldParameters {
     candidate_spacing: number;
     step_size: number;
     min_length: number;
+    seed_x: number;
+    seed_y: number;
     // alpha: number;
     // beta: number;
     // sigma: number;

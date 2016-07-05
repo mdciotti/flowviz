@@ -1,6 +1,7 @@
 import Point from "./Point.ts";
 import AABB from "./AABB.ts";
 import NDArray from "./NDArray.ts";
+import Vec2 from "./Vec2.ts"
 import { Streamline, Vertex } from "./Streamline.ts";
 
 export class Bin<T> {
@@ -138,7 +139,7 @@ export default class BinGrid<T> {
                 return true;
 
             return false;
-        });
+        }) !== null;
     }
 
     /**
@@ -160,7 +161,22 @@ export default class BinGrid<T> {
                 return true;
 
             return false;
+        }) !== null;
+    }
+
+    public getMinDistance(point: Point): number {
+        let min = Math.max(this.bounds.width, this.bounds.height);
+        const bin = this.getBinAt(point);
+        if (bin === null) return 0;
+
+        this.aggregateBins(bin, (p: Point, b: Bin<T>) => {
+            // Exclude points in streamline
+            if ((<Vertex>point).streamline === (<Vertex>p).streamline) return;
+            let d = Vec2.distance(point, p);
+            min = Math.min(min, d);
         });
+
+        return min;
     }
 
     /**

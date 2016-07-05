@@ -18,11 +18,13 @@ export class Vertex extends Point {
 
     public id: number;
     public partialArcLength: number;
+    public thickness: number;
     public v: Vec2;
 
     constructor(x: number, y: number, public streamline: Streamline) {
         super(x, y);
         this.v = new Vec2(0, 0);
+        this.thickness = 1.0;
     }
 }
 
@@ -84,13 +86,20 @@ export class Streamline {
         // Draw seed
         // ctx.moveTo(this.seed.x, this.seed.y);
 
-        ctx.beginPath();
-        ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
+        let v0 = this.vertices[0];
+        let v1: Vertex;
+        let lw = ctx.lineWidth;
         for (let i = 1; i < this.vertices.length; i++) {
-            let v = this.vertices[i];
-            ctx.lineTo(v.x, v.y);
+            ctx.save();
+            v1 = this.vertices[i];
+            ctx.lineWidth = v1.thickness * lw;
+            ctx.beginPath();
+            ctx.moveTo(v0.x, v0.y);
+            ctx.lineTo(v1.x, v1.y);
+            ctx.stroke();
+            v0 = v1;
+            ctx.restore();
         }
-        ctx.stroke();
     }
 
     private computeLine(dir: Direction, vertices: Vertex[]): number {
@@ -123,6 +132,11 @@ export class Streamline {
                 p1.partialArcLength = partialArcLength;
                 vertices.push(p0);
                 this.field.binGrid2.insert(p0);
+
+                // Compute thickness
+                let d = this.field.binGrid.getMinDistance(p0);
+                let th = (d - this.field.d_test) / (this.field.d_sep - this.field.d_test);
+                p0.thickness = 2 * (d < this.field.d_sep ? th : 1.0);
             } else {
                 break;
             }

@@ -44,7 +44,9 @@ export default class FieldVisualizer {
         d_test: 0.01,
         candidate_spacing: 0.04,
         step_size: 0.01,
-        min_length: 0.1
+        min_length: 0.1,
+        seed_x: 0,
+        seed_y: 0
     };
 
     constructor(f: Field) {
@@ -183,10 +185,15 @@ export default class FieldVisualizer {
         if (!this.mouseDragging && ev.button == 0) {
             let x = toWorldX(ev.pageX, this.canvas, this.field.bounds);
             let y = toWorldY(ev.pageY, this.canvas, this.field.bounds);
+            x = mapRange(x, this.field.bounds.x - this.field.bounds.width / 2, this.field.bounds.width, -1, 2);
+            y = mapRange(y, this.field.bounds.y - this.field.bounds.height / 2, this.field.bounds.height, -1, 2);
 
             // Create seed point
-            let p = new Point(x, y);
-            this.field.addSeed(p);
+            // let p = new Point(x, y);
+            // this.field.addSeed(p);
+            this.parameters.seed_x = x;
+            this.parameters.seed_y = y;
+            this.field.updateParameters(this.parameters);
             this.draw()
             // let b = this.field.mesh.bingrid.getBinAt(p);
             // console.log(b, b.items.map((f)=>f.id));
