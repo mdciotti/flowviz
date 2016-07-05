@@ -108,69 +108,19 @@ export default class BinGrid<T> {
     }
 
     /**
-     * Combines all of the points from several bins into one array.
-     * @param the bins to collect points from
-     * @return the aggregated array of points
-     */
-    public aggregateBinsOld(bin: Bin<T>): Array<T> {
-        let items: Array<T> = [];
-        // Accumulate items from central bin
-        for (let p of bin.items) {
-            items.push(p);
-        }
-        // Accumulate items from neighboring bins
-        for (let b of bin.neighbors) {
-            for (let p of b.items) {
-                items.push(p);
-            }
-        }
-        return items;
-    }
-
-    /**
      * Combines all of the items from several bins into one array.
      * @param the bins to collect items from
      * @return the aggregated array of items
      */
-    public aggregateBins(bin: Bin<T>, fn: (p: Point, b: Bin<T>) => boolean): boolean {
+    public aggregateBins(bin: Bin<T>, fn: (p: Point, b: Bin<T>) => any): any {
         // Iterate over all items from neighboring bins
-        for (let b of bin.neighbors)
-            for (let p of b.items)
-                if (fn(p, b)) return true;
-        return false;
-    }
-
-    /**
-     * Aggregate items from bins into an iterator.
-     */
-    public aggregateBins2(bin: Bin<T>): IterableIterator<Point> {
-        let currentBin = -1;
-        let i = 0;
-        let b = bin;
-        const iterable: IterableIterator<Point> = {
-            next(): IteratorResult<Point> {
-                if (i >= b.items.length) {
-                    i = 0;
-
-                    do {
-                        ++currentBin;
-                        if (currentBin < bin.neighbors.length) {
-                            b = bin.neighbors[currentBin];
-                        } else {
-                            return { done: true, value: null };
-                        }
-                    } while (b.items.length === 0);
-                }
-
-                let p = b.items[i];
-                ++i;
-                return { done: false, value: p };
-            },
-            [Symbol.iterator](): IterableIterator<Point> {
-                return iterable;
+        for (let b of bin.neighbors) {
+            for (let p of b.items) {
+                let result = fn(p, b);
+                if (result) return result;
             }
-        };
-        return iterable;
+        }
+        return null;
     }
 
     /**
