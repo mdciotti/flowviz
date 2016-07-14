@@ -53,14 +53,14 @@ export default class FieldVisualizer {
         seed_y: 0
     };
 
-    constructor(f: Field) {
+    constructor(f: Field, w: number, h: number) {
         this.field = f;
         this.field.updateParameters(this.parameters);
         this.el = document.createElement("div");
         this.el.classList.add("flowviz");
         this.canvas = document.createElement("canvas");
-        this.canvas.width = 500;
-        this.canvas.height = 500;
+        this.canvas.width = w;
+        this.canvas.height = h;
         this.el.appendChild(this.canvas);
         this.ctx = this.canvas.getContext("2d");
         this.gui = new dat.GUI({autoPlace: false});
@@ -159,7 +159,7 @@ export default class FieldVisualizer {
             return (e) => {
                 let vm = new VectorMesh();
                 vm.loadPLYData(e.target.result);
-                this.field = new MeshField(new AABB(0.5, 0.5, 1, 1), vm);
+                this.field = new MeshField(vm.bounds, vm);
                 this.field.updateParameters(this.parameters);
                 this.draw();
             };
