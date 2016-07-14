@@ -9,3 +9,13 @@ export function clamp(min: number, max: number, x: number): number {
 export function mapRange(x, x0, xw, y0, yw) {
     return (x - x0) / xw * yw + y0;
 }
+
+export function simpleDateTimeString(d: Date): string {
+    let year = d.getFullYear();
+    let month = d.getMonth() + 1;
+    let date = d.getDate();
+    let hour = d.getHours();
+    let min = d.getMinutes();
+    let sec = d.getSeconds();
+    return `${year}-${month}-${date}-${hour}-${min}-${sec}`;
+}

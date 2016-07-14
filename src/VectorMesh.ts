@@ -147,7 +147,7 @@ export default class VectorMesh {
      * @param vec_at a function that should return the vector value at a given coordinate
      * @return a new VectorMesh object
      */
-    static create(bounds: AABB, subdivisions: number, vec_at: (x: number, y: number, vec?: Vec2) => Vec2): VectorMesh {
+    public static create(bounds: AABB, subdivisions: number, vec_at: (x: number, y: number, vec?: Vec2) => Vec2): VectorMesh {
         let vertices: Vertex[] = [];
         let faces: Face[] = [];
         const left = bounds.x - bounds.width / 2;
@@ -185,6 +185,28 @@ export default class VectorMesh {
         mesh.bounds = bounds;
         mesh.fillBins();
         return mesh;
+    }
+
+    public static serialize(mesh: VectorMesh): string {
+        let data = `ply
+format ascii 1.0
+element vertex ${mesh.vertices.length}
+property float32 x
+property float32 y
+property float32 vx
+property float32 vy
+element face ${mesh.faces.length}
+property list uint8 int32 vertex_indices
+end_header
+`;
+        for (let v of mesh.vertices) {
+            data += `${v.x} ${v.y} ${v.vx} ${v.vy}\n`
+        }
+        for (let f of mesh.faces) {
+            data += `3 ${f.A.id} ${f.B.id} ${f.C.id}\n`;
+        }
+
+        return data;
     }
 
     public loadPLYData(filedata: ArrayBuffer) {
@@ -277,7 +299,7 @@ export default class VectorMesh {
         let h = this.bounds.height;
         let n = 24;
         this.bingrid = new BinGrid<Face>(this.bounds, n);
-        
+
         for (let f of this.faces) {
             let minX = Math.min(f.A.x, f.B.x, f.C.x) - this.bounds.left;
             let maxX = Math.max(f.A.x, f.B.x, f.C.x) - this.bounds.left;

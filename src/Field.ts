@@ -213,6 +213,8 @@ export abstract class Field implements Differentiable {
             }
         }
     }
+
+    public abstract export(): string;
 }
 
 
@@ -259,8 +261,25 @@ export class FeatureField extends Field implements Differentiable {
             ctx.strokeStyle = "#cccccc";
             this.binGrid.draw(ctx);
         }
+        if (opts.features) {
+            ctx.fillStyle = "#cc3333";
+            for (let f of this.features) {
+                let p = new Point(f.x, f.y);
+                p.draw(ctx, 5);
+        }
+        }
         super.draw(ctx, opts);
         ctx.restore();
+    }
+
+    public discretize(subdivisions: number): MeshField {
+        let mesh = VectorMesh.create(this.bounds, subdivisions, this.vec_at.bind(this));
+        console.log(mesh);
+        return new MeshField(this.bounds, mesh);
+}
+
+    public export(): string {
+        return "not yet implemented";
     }
 }
 
@@ -303,6 +322,10 @@ export class MeshField extends Field implements Differentiable {
         if (opts.mesh) this.mesh.draw(ctx);
         super.draw(ctx, opts);
         ctx.restore();
+    }
+
+    public export(): string {
+        return VectorMesh.serialize(this.mesh);
     }
 }
 

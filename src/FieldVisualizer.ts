@@ -1,8 +1,11 @@
 /// <reference path="../node_modules/@types/dat-gui/index.d.ts" />
 
+declare class FileSaver {};
+declare function saveAs(data: Blob|File, filename?: string, disableAutoBOM?: boolean): FileSaver;
+
 import { Field, MeshField, FieldOptions, FieldParameters } from "./Field.ts";
 import Point from "./Point.ts";
-import { mapRange } from "./util.ts";
+import { mapRange, simpleDateTimeString } from "./util.ts";
 import AABB from "./AABB.ts";
 import VectorMesh from "./VectorMesh.ts";
 
@@ -92,6 +95,7 @@ export default class FieldVisualizer {
         this.gui.add(this, "generateStreamlines").name("generate streamlines");
         this.gui.add(this, "clear").name("clear streamlines");
         this.gui.add(this, "discretize");
+        this.gui.add(this, "export");
         this.gui.add(this, "draw");
 
         // this.$file = document.createElement("input");
@@ -265,5 +269,15 @@ export default class FieldVisualizer {
     public discretize() {
         this.field = this.field.discretize(this.parameters.resolution);
         this.draw();
+    }
+
+    /**
+     * Exports the current field to a file.
+     */
+    public export() {
+        let filedata = this.field.export();
+        let blob = new Blob([filedata], {type: "text/plain;charset=utf-8"});
+        let date = simpleDateTimeString(new Date());
+        saveAs(blob, `export-${date}.ply`, true);
     }
 }

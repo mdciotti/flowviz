@@ -4,6 +4,7 @@
   "description": "Streamline is a vector field visualizer.",
   "main": "main.js",
   "dependencies": {
+    "file-saver": "1.3.2",
     "is-little-endian": "0.0.0",
     "lite-server": "2.2.2",
     "parse-ply": "0.1.0",
