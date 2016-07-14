@@ -22,6 +22,7 @@ export class Bin<T> {
 export default class BinGrid<T> {
     private bins: NDArray<Bin<T>>;
     private pointCount: number = 0;
+    private size: number = 0;
 
     constructor(public bounds: AABB, public subdivisions: number) {
         // Create bins in a grid arrangement
@@ -78,6 +79,7 @@ export default class BinGrid<T> {
             point._bin_id = this.pointCount++;
             b.range[0] = Math.min(point._bin_id, b.range[0]);
             b.range[1] = Math.max(point._bin_id, b.range[1]);
+            this.size++;
             return true;
         } else {
             return false;
@@ -186,6 +188,7 @@ export default class BinGrid<T> {
         for (let b of this.bins.data) {
             b.items = [];
         }
+        this.size = 0;
     }
 
     /**
