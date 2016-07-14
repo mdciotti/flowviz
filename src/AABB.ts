@@ -16,6 +16,22 @@ export default class AABB {
         this.height = height;
     }
 
+    get left(): number {
+        return this.x - this.width / 2;
+    }
+
+    get right(): number {
+        return this.x + this.width / 2;
+    }
+
+    get top(): number {
+        return this.y + this.height / 2;
+    }
+
+    get bottom(): number {
+        return this.y - this.height / 2;
+    }
+
     /**
      * Returns a point sampled uniformly within this region.
      */
