@@ -310,6 +310,7 @@ export interface FieldParameters {
     d_sep: number;
     d_test: number;
     candidate_spacing: number;
+    resolution: number;
     step_size: number;
     min_length: number;
     seed_x: number;

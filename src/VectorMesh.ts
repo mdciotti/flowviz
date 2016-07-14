@@ -7,7 +7,7 @@ import Point from "./Point.ts";
 import Vec2 from "./Vec2.ts";
 import NDArray from "./NDArray.ts";
 import BinGrid from "./BinGrid.ts";
-import { clamp } from "./util.ts";
+import { clamp, mapRange } from "./util.ts";
 import PLYParser from "parse-ply";
 import through from "through";
 
@@ -31,7 +31,8 @@ class Vertex extends Vec2 {
         ctx.strokeStyle = "#cc3333"
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
-        ctx.lineTo(this.x + this.vx / 25, this.y + this.vy / 25);
+        // ctx.lineTo(this.x + this.vx / 25, this.y + this.vy / 25);
+        ctx.lineTo(this.x + this.vx * 10, this.y + this.vy * 10);
         ctx.stroke();
         // let caption = this.id.toString();
         // ctx.fillText(caption, this.x, this.y);
@@ -58,7 +59,7 @@ class Face {
     private determinant: number;
     public _bin_id: number;
 
-    constructor(id, A, B, C) {
+    constructor(id: number, A: Vertex, B: Vertex, C: Vertex) {
         this.id = id;
         this.A = A;
         this.B = B;
@@ -132,11 +133,61 @@ export default class VectorMesh {
     private vertices: Vertex[];
     private faces: Face[];
     private bingrid: BinGrid<Face>;
+    public bounds: AABB;
 
-    constructor(filedata: ArrayBuffer) {
+    constructor() {
         this.vertices = [];
         this.faces = [];
+    }
 
+    /**
+     * Creates a discretized vector mesh from a continuous vector field.
+     * @param bounds the boundaries
+     * @param subdivisions the resolution of the resulting mesh
+     * @param vec_at a function that should return the vector value at a given coordinate
+     * @return a new VectorMesh object
+     */
+    static create(bounds: AABB, subdivisions: number, vec_at: (x: number, y: number, vec?: Vec2) => Vec2): VectorMesh {
+        let vertices: Vertex[] = [];
+        let faces: Face[] = [];
+        const left = bounds.x - bounds.width / 2;
+        const top = bounds.y + bounds.height / 2;
+        let v = new Vec2(0, 0);
+
+        // Create vertices on regular grid
+        for (let j = 0; j <= subdivisions; j++) {
+            for (let i = 0; i <= subdivisions; i++) {
+                let id = j * (subdivisions + 1) + i;
+                let x = mapRange(i, 0, subdivisions, bounds.x - bounds.width / 2, bounds.width);
+                let y = mapRange(j, 0, subdivisions, bounds.y - bounds.height / 2, bounds.height);
+                v = vec_at(x, y, v);
+                vertices.push(new Vertex(id, x, y, v.x, v.y));
+            }
+        }
+
+        // Attach vertices to make faces
+        let face_id = 0;
+        for (let j = 1; j <= subdivisions; j++) {
+            for (let i = 1; i <= subdivisions; i++) {
+                let id0 = j * (subdivisions + 1) + i;
+                let id1 = (j - 1) * (subdivisions + 1) + i;
+                let id2 = id0 - 1;
+                faces.push(new Face(face_id, vertices[id0], vertices[id1], vertices[id2]));
+                id0 = id1 - 1;
+                faces.push(new Face(face_id, vertices[id0], vertices[id1], vertices[id2]));
+                face_id += 1;
+            }
+        }
+
+        let mesh = new VectorMesh();
+        mesh.vertices = vertices;
+        mesh.faces = faces;
+        mesh.bounds = bounds;
+        mesh.fillBins();
+        return mesh;
+    }
+
+    public loadPLYData(filedata: ArrayBuffer) {
         // Create custom stream for browser
         let stream = through(function (data) {
             this.queue(data);
@@ -144,7 +195,7 @@ export default class VectorMesh {
 
         PLYParser(stream, (err, data) => {
             if (err) throw err;
-            this.loadPLYData(data);
+            this.processPLYData(data);
         });
 
         stream.write(filedata);
@@ -155,7 +206,7 @@ export default class VectorMesh {
      * Process the parsed PLY data into the VectorMesh data structures.
      * @return true if the PLY data was successfully processed
      */
-    private loadPLYData(data): boolean {
+    private processPLYData(data): boolean {
         try {
             if (!data.hasOwnProperty('vertex')) {
                 throw new Error("Data must contain 'vertex' elements");
@@ -179,13 +230,23 @@ export default class VectorMesh {
                 throw new Error("Data must contain a 'vertex_indices' property on 'face' elements");
             }
 
+            let minX = data.vertex.x[0];
+            let minY = data.vertex.y[0];
+            let maxX = data.vertex.x[0];
+            let maxY = data.vertex.y[0];
+
             let n = data.vertex.x.length;
             for (let i = 0; i < n; i++) {
                 this.vertices[i] = new Vertex(i,
                     data.vertex.x[i], data.vertex.y[i],
                     data.vertex.vx[i], data.vertex.vy[i]
                 );
+                minX = Math.min(minX, data.vertex.x[i]);
+                minY = Math.min(minY, data.vertex.y[i]);
+                maxX = Math.max(maxX, data.vertex.x[i]);
+                maxY = Math.max(maxY, data.vertex.y[i]);
             }
+
             n = data.face.vertex_indices.length;
             for (let i = 0; i < n; i++) {
                 let A = this.vertices[data.face.vertex_indices[i][0]];
@@ -193,31 +254,50 @@ export default class VectorMesh {
                 let C = this.vertices[data.face.vertex_indices[i][2]];
                 this.faces[i] = new Face(i, A, B, C);
             }
+
+            let w = maxX - minX;
+            let h = maxY - minY;
+            let x = minX + w / 2;
+            let y = minY + h / 2;
+            this.bounds = new AABB(x, y, w, h);
+            this.fillBins();
+
         } catch (e) {
             console.error("Invalid PLY vector mesh format.");
             console.log(e);
             console.log(data);
             return false;
         }
-        this.fillBins();
+
         return true;
     }
 
     private fillBins() {
-        let w = 1;
-        let h = 1;
-        let n = 20;
-        this.bingrid = new BinGrid<Face>(new AABB(0.5, 0.5, w, h), n);
+        let w = this.bounds.width;
+        let h = this.bounds.height;
+        let n = 24;
+        this.bingrid = new BinGrid<Face>(this.bounds, n);
+        
         for (let f of this.faces) {
-            let minX = Math.min(f.A.x, f.B.x, f.C.x);
-            let maxX = Math.max(f.A.x, f.B.x, f.C.x);
-            let minY = Math.min(f.A.y, f.B.y, f.C.y);
-            let maxY = Math.max(f.A.y, f.B.y, f.C.y);
-            let startX = clamp(0, n - 1, Math.floor(minX / (w / n)));
-            let startY = clamp(0, n - 1, Math.floor(minY / (h / n)));
-            let endX = clamp(0, n - 1, Math.floor(maxX / (w / n)));
-            let endY = clamp(0, n - 1, Math.floor(maxY / (h / n)));
-            // this.bingrid.bins.hi(endX, endY).lo(startX, startY).each((v) => {});
+            let minX = Math.min(f.A.x, f.B.x, f.C.x) - this.bounds.left;
+            let maxX = Math.max(f.A.x, f.B.x, f.C.x) - this.bounds.left;
+            let minY = Math.min(f.A.y, f.B.y, f.C.y) - this.bounds.bottom;
+            let maxY = Math.max(f.A.y, f.B.y, f.C.y) - this.bounds.bottom;
+            
+            let startX = Math.floor(minX / (w / n));
+            let startY = Math.floor(minY / (h / n));
+            let endX = Math.floor(maxX / (w / n));
+            let endY = Math.floor(maxY / (h / n));
+
+            if (endX < 0 || startX >= n || endY < 0 || startY >= n) {
+                continue;
+            }
+
+            startX = clamp(0, n - 1, startX - 1);
+            startY = clamp(0, n - 1, startY - 1);
+            endX = clamp(0, n - 1, endX + 1);
+            endY = clamp(0, n - 1, endY + 1);
+
             for (let j = startY; j <= endY; j++) {
                 for (let i = startX; i <= endX; i++) {
                     this.bingrid.insertAt(i, n - 1 - j, f);

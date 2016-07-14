@@ -43,6 +43,7 @@ export default class FieldVisualizer {
         d_sep: 0.02,
         d_test: 0.01,
         candidate_spacing: 0.04,
+        resolution: 32,
         step_size: 0.01,
         min_length: 0.1,
         seed_x: 0,
@@ -81,6 +82,7 @@ export default class FieldVisualizer {
         params.add(this.parameters, "d_test", 0, 0.1).onFinishChange(update);
         params.add(this.parameters, "min_length", 0, 1).onFinishChange(update);
         params.add(this.parameters, "candidate_spacing", 0, 0.2).onFinishChange(update);
+        params.add(this.parameters, "resolution", 1, 128).step(1).onFinishChange(update);
         // this.gui.add(this, "setViewBounds");
         // this.gui.add(this, "reset");
         this.step = this.stepn(1);
@@ -89,6 +91,7 @@ export default class FieldVisualizer {
         this.gui.add(this, "step100").name("step x100");
         this.gui.add(this, "generateStreamlines").name("generate streamlines");
         this.gui.add(this, "clear").name("clear streamlines");
+        this.gui.add(this, "discretize");
         this.gui.add(this, "draw");
 
         // this.$file = document.createElement("input");
@@ -150,7 +153,8 @@ export default class FieldVisualizer {
         let reader = new FileReader();
         reader.onload = ((f) => {
             return (e) => {
-                let vm = new VectorMesh(e.target.result);
+                let vm = new VectorMesh();
+                vm.loadPLYData(e.target.result);
                 this.field = new MeshField(new AABB(0.5, 0.5, 1, 1), vm);
                 this.field.updateParameters(this.parameters);
                 this.draw();
@@ -253,5 +257,13 @@ export default class FieldVisualizer {
             }
             this.draw();
         }
+    }
+
+    /**
+     * Reassigns the field to a discretized version of the feature field.
+     */
+    public discretize() {
+        this.field = this.field.discretize(this.parameters.resolution);
+        this.draw();
     }
 }
