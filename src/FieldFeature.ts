@@ -25,6 +25,8 @@ export default class FieldFeature {
     public getVelocity(x: number, y: number, vector?: Vec2): Vec2 {
         if (!vector) vector = new Vec2(0, 0);
         this.V.call(this, x - this.x, y - this.y, vector);
+        if (isNaN(vector.x)) vector.x = 0;
+        if (isNaN(vector.y)) vector.y = 0;
         return Vec2.scale(vector, vector, this.strength);
     }
 
