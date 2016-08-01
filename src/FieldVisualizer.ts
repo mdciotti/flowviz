@@ -50,7 +50,13 @@ export default class FieldVisualizer {
         step_size: 0.01,
         min_length: 0.1,
         seed_x: 0,
-        seed_y: 0
+        seed_y: 0,
+        t_end: 1,
+        t_span: 1,
+        check_bounds: true,
+        check_sep: true,
+        check_loops: true,
+        tapering: true
     };
 
     constructor(f: Field, w: number, h: number) {
@@ -81,11 +87,21 @@ export default class FieldVisualizer {
         let params = this.gui.addFolder("Parameters");
         params.open();
         let update = () => this.field.updateParameters(this.parameters);
+        let updateDraw = () => {
+            this.field.updateParameters(this.parameters);
+            this.draw();
+        };
         params.add(this.parameters, "d_sep", 0, 0.1).onFinishChange(update);
         params.add(this.parameters, "d_test", 0, 0.1).onFinishChange(update);
         params.add(this.parameters, "min_length", 0, 1).onFinishChange(update);
         params.add(this.parameters, "candidate_spacing", 0, 0.2).onFinishChange(update);
         params.add(this.parameters, "resolution", 1, 128).step(1).onFinishChange(update);
+        params.add(this.parameters, "t_end", 0, 10).onChange(updateDraw);
+        params.add(this.parameters, "t_span", 0, 5).onChange(updateDraw);
+        params.add(this.parameters, "check_bounds").onChange(update);
+        params.add(this.parameters, "check_sep").onChange(update);
+        params.add(this.parameters, "check_loops").onChange(update);
+        params.add(this.parameters, "tapering").onChange(updateDraw);
         // this.gui.add(this, "setViewBounds");
         // this.gui.add(this, "reset");
         this.step = this.stepn(1);

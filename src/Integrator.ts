@@ -2,12 +2,13 @@ import Vec2 from "./Vec2";
 import Point from "./Point";
 
 export interface Differentiable {
-    vec_at(x: number, y: number, v?: Vec2): Vec2;
+    vec_at(x: number, y: number, t: number, v?: Vec2): Vec2;
 }
 
 export interface Integrator {
     // Step size parameter
     stepSize: number;
+    t: number;
 
     // Differential calculator function
     diff: Differentiable;
@@ -21,46 +22,49 @@ export class RungeKutta4 implements Integrator {
     v1: Vec2;
     v2: Vec2;
     v3: Vec2;
+    t: number = 0;
 
     constructor(public stepSize: number, public diff: Differentiable) {}
 
     step(x: number, y: number): Point {
-        this.v0 = this.diff.vec_at(x, y, this.v0);
+        this.v0 = this.diff.vec_at(x, y, this.t, this.v0);
         this.v0 = Vec2.normalize(this.v0, this.v0);
         Vec2.scale(this.v0, this.v0, this.stepSize);
-        this.v1 = this.diff.vec_at(x + this.v0.x / 2, y + this.v0.y / 2, this.v1);
+        this.v1 = this.diff.vec_at(x + this.v0.x / 2, y + this.v0.y / 2, this.t, this.v1);
         this.v1 = Vec2.normalize(this.v1, this.v1);
         Vec2.scale(this.v1, this.v1, this.stepSize);
-        this.v2 = this.diff.vec_at(x + this.v1.x / 2, y + this.v1.y / 2, this.v2);
+        this.v2 = this.diff.vec_at(x + this.v1.x / 2, y + this.v1.y / 2, this.t, this.v2);
         this.v2 = Vec2.normalize(this.v2, this.v2);
         Vec2.scale(this.v2, this.v2, this.stepSize);
-        this.v3 = this.diff.vec_at(x + this.v2.x, y + this.v2.y, this.v3);
+        this.v3 = this.diff.vec_at(x + this.v2.x, y + this.v2.y, this.t, this.v3);
         this.v3 = Vec2.normalize(this.v3, this.v3);
         Vec2.scale(this.v3, this.v3, this.stepSize);
 
         x += this.v0.x / 6 + this.v1.x / 3 + this.v2.x / 3 + this.v3.x / 6;
         y += this.v0.y / 6 + this.v1.y / 3 + this.v2.y / 3 + this.v3.y / 6;
+        this.t += this.stepSize;
 
         return new Point(x, y);
     }
     
     stepReverse(x: number, y: number): Point {
         let h = -this.stepSize;
-        this.v0 = this.diff.vec_at(x, y, this.v0);
+        this.v0 = this.diff.vec_at(x, y, this.t, this.v0);
         this.v0 = Vec2.normalize(this.v0, this.v0);
         Vec2.scale(this.v0, this.v0, h);
-        this.v1 = this.diff.vec_at(x + this.v0.x / 2, y + this.v0.y / 2, this.v1);
+        this.v1 = this.diff.vec_at(x + this.v0.x / 2, y + this.v0.y / 2, this.t, this.v1);
         this.v1 = Vec2.normalize(this.v1, this.v1);
         Vec2.scale(this.v1, this.v1, h);
-        this.v2 = this.diff.vec_at(x + this.v1.x / 2, y + this.v1.y / 2, this.v2);
+        this.v2 = this.diff.vec_at(x + this.v1.x / 2, y + this.v1.y / 2, this.t, this.v2);
         this.v2 = Vec2.normalize(this.v2, this.v2);
         Vec2.scale(this.v2, this.v2, h);
-        this.v3 = this.diff.vec_at(x + this.v2.x, y + this.v2.y, this.v3);
+        this.v3 = this.diff.vec_at(x + this.v2.x, y + this.v2.y, this.t, this.v3);
         this.v3 = Vec2.normalize(this.v3, this.v3);
         Vec2.scale(this.v3, this.v3, h);
 
         x += this.v0.x / 6 + this.v1.x / 3 + this.v2.x / 3 + this.v3.x / 6;
         y += this.v0.y / 6 + this.v1.y / 3 + this.v2.y / 3 + this.v3.y / 6;
+        this.t -= this.stepSize;
 
         return new Point(x, y);
     }

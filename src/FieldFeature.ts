@@ -1,8 +1,8 @@
-import Vec2 from "./Vec2.ts";
+import Vec2 from "./Vec2";
 
-type VectorField = (x: number, y: number, vector: Vec2) => void;
+type VectorField = (x: number, y: number, t: number, vector: Vec2) => void;
 
-export default class FieldFeature {
+export class FieldFeature {
     private x: number;
     private y: number;
     private strength: number;
@@ -16,15 +16,15 @@ export default class FieldFeature {
         this.enabled = true;
 
         // Specify default function
-        this.V = Fn || function (x: number, y: number, vector: Vec2) {
+        this.V = Fn || function (x: number, y: number, t: number, vector: Vec2) {
             vector.x = 0;
             vector.y = 0;
         };
     }
 
-    public getVelocity(x: number, y: number, vector?: Vec2): Vec2 {
+    public getVelocity(x: number, y: number, t: number, vector?: Vec2): Vec2 {
         if (!vector) vector = new Vec2(0, 0);
-        this.V.call(this, x - this.x, y - this.y, vector);
+        this.V.call(this, x - this.x, y - this.y, t, vector);
         if (isNaN(vector.x)) vector.x = 0;
         if (isNaN(vector.y)) vector.y = 0;
         return Vec2.scale(vector, vector, this.strength);

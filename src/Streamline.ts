@@ -1,6 +1,7 @@
 import Point from "./Point";
 import Vec2 from "./Vec2";
 import { Field } from "./Field";
+import { clamp } from "./util";
 
 enum Direction {
     FORWARD = 1,
@@ -20,6 +21,7 @@ export class Vertex extends Point {
     public partialArcLength: number;
     public thickness: number;
     public v: Vec2;
+    public t: number;
 
     constructor(x: number, y: number, public streamline: Streamline) {
         super(x, y);
@@ -89,17 +91,26 @@ export class Streamline {
         let v0 = this.vertices[0];
         let v1: Vertex;
         let lw = ctx.lineWidth;
+        let opacity = 1;
         for (let i = 1; i < this.vertices.length; i++) {
-            ctx.save();
             v1 = this.vertices[i];
-            ctx.lineWidth = v1.thickness * lw;
-            ctx.beginPath();
-            ctx.moveTo(v0.x, v0.y);
-            ctx.lineTo(v1.x, v1.y);
-            ctx.stroke();
+            let delta = v1.t - (this.field.t_end - this.field.t_span);
+            if (delta >= 0) {
+                if (v1.t > this.field.t_end) break;
+                ctx.save();
+                opacity = clamp(0, 1, delta / this.field.t_span);
+                ctx.globalAlpha = v1.t <= this.field.t_end ? opacity : 0;
+                if (this.field.tapering) ctx.lineWidth = v1.thickness * lw;
+                ctx.beginPath();
+                ctx.moveTo(v0.x, v0.y);
+                ctx.lineTo(v1.x, v1.y);
+                ctx.stroke();
+                ctx.restore();
+            }
             v0 = v1;
-            ctx.restore();
         }
+        ctx.lineWidth = lw;
+        ctx.globalAlpha = 1;
     }
 
     private computeLine(dir: Direction, vertices: Vertex[]): number {
@@ -111,6 +122,8 @@ export class Streamline {
         let p1: Vertex = this.seed; // last vertex
         let p0: Vertex = null; // current vertex
 
+        this.field.integrator.t = 0;
+
         for (let i = 0; i < MAX_ITER; i++) {
             if (dir === Direction.FORWARD) {
                 p0 = Vertex.fromPoint(this.field.integrator.step(p1.x, p1.y), this);
@@ -119,7 +132,7 @@ export class Streamline {
             }
 
             // Vec2.subtract(p0.v, p0, p1);
-            this.field.vec_at(p0.x, p0.y, p1.v);
+            this.field.vec_at(p0.x, p0.y, 0, p1.v);
 
             let len = Math.hypot(p0.x - p1.x, p0.y - p1.y);
             if (len < this.field.minStepLength) {
@@ -130,6 +143,7 @@ export class Streamline {
             if (this.vertexIsValid(p0, p1, dir)) {
                 p1.streamline = this;
                 p1.partialArcLength = partialArcLength;
+                p1.t = this.field.integrator.t;
                 vertices.push(p0);
                 this.field.binGrid2.insert(p0);
 
@@ -146,11 +160,15 @@ export class Streamline {
     }
 
     private vertexIsValid(p0: Point, p1: Vertex, dir: Direction): boolean {
-        let inBounds = this.field.bounds.contains(p0);
-        if (!inBounds) return false;
-        let emptyRadius = !this.field.binGrid.hasVertexWithinRadius(p0, this.field.d_test, this);
-        if (!emptyRadius) return false;
-        if (p1) {
+        if (this.field.check_bounds) {
+            let inBounds = this.field.bounds.contains(p0);
+            if (!inBounds) return false;
+        }
+        if (this.field.check_sep) {
+            let emptyRadius = !this.field.binGrid.hasVertexWithinRadius(p0, this.field.d_test, this);
+            if (!emptyRadius) return false;
+        }
+        if (this.field.check_loops && p1) {
             let looping = LoopDetection(this.field, p1, <Vertex>p0, dir);
             if (looping) return false;
         }

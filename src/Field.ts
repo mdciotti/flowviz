@@ -4,7 +4,7 @@ import { Streamline, Vertex } from "./Streamline";
 import Point from "./Point";
 import Vec2 from "./Vec2";
 import { lerp, mapRange } from "./util";
-import { FieldFeature, UnsteadyFieldFeature } from "./FieldFeature";
+import { FieldFeature } from "./FieldFeature";
 import VectorMesh from "./VectorMesh";
 import { Integrator, Differentiable, RungeKutta4 } from "./Integrator";
 
@@ -40,6 +40,18 @@ export abstract class Field implements Differentiable {
     public alpha: number = 20 * Math.PI / 90; // 20 deg
     public beta: number = 10 * Math.PI / 90; // 10 deg
 
+    /** Unsteady visualization parameters */
+    public t_span: number = 10;
+    public t_end: number = 0.1;
+
+    /** Toggles for advection */
+    public check_bounds: boolean = true;
+    public check_sep: boolean = true;
+    public check_loops: boolean = true;
+
+    /** Toggle for line tapering */
+    public tapering: boolean = true;
+
     public integrator: Integrator;
 
     public binGrid: BinGrid<Vertex>;
@@ -65,10 +77,16 @@ export abstract class Field implements Differentiable {
         let vdim = Math.min(this.bounds.width, this.bounds.height);
         this.d_sep = params.d_sep * vdim;
         this.d_test = params.d_test * vdim;
+        this.t_end = params.t_end;
+        this.t_span = params.t_span;
         this.candidate_spacing = params.candidate_spacing * vdim;
         this.minStepLength = 0.0001 * vdim;
         this.minStreamlineLength = params.min_length * vdim;
         this.integrator = new RungeKutta4(params.step_size * vdim, this);
+        this.check_bounds = params.check_bounds;
+        this.check_sep = params.check_sep;
+        this.check_loops = params.check_loops;
+        this.tapering = params.tapering;
 
         this.initialSeed.x = mapRange(params.seed_x, -1, 2, this.bounds.x - this.bounds.width / 2, this.bounds.width);
         this.initialSeed.y = mapRange(params.seed_y, -1, 2, this.bounds.y - this.bounds.height / 2, this.bounds.height);
@@ -93,7 +111,7 @@ export abstract class Field implements Differentiable {
         this.binGrid2.clear();
     }
 
-    public abstract vec_at(x: number, y: number, vector?: Vec2): Vec2;
+    public abstract vec_at(x: number, y: number, t: number, vector?: Vec2): Vec2;
 
     public addSeed(point: Point): void {
         this.seedQueue.push(point);
@@ -198,7 +216,7 @@ export abstract class Field implements Differentiable {
                 let y = lerp(lastVertex.y, vert.y, t);
 
                 // Calculate orthogonal vector using rotated vector field
-                orthoVec = this.vec_at(x, y, orthoVec);
+                orthoVec = this.vec_at(x, y, 0, orthoVec);
                 let temp = orthoVec.x;
                 let k = this.d_sep / Vec2.magnitude(orthoVec);
                 orthoVec.x = -orthoVec.y * k;
@@ -239,11 +257,11 @@ export class FeatureField extends Field implements Differentiable {
      * @param vector an optional Vec2 instance to reuse
      * @return the computed vector
      */
-    public vec_at(x: number, y: number, vector?: Vec2): Vec2 {
+    public vec_at(x: number, y: number, t: number, vector?: Vec2): Vec2 {
         if (!vector) vector = new Vec2(0, 0);
         Vec2.zero(vector);
         this.features.forEach((f) => {
-            Vec2.add(vector, vector, f.getVelocity(x, y));
+            Vec2.add(vector, vector, f.getVelocity(x, y, t));
         });
         return vector;
     }
@@ -292,13 +310,14 @@ export class MeshField extends Field implements Differentiable {
         // this.mesh.loadASCII("data/test.ply");
     }
 
-    public vec_at(x: number, y: number, vector?: Vec2): Vec2 {
+    public vec_at(x: number, y: number, t: number, vector?: Vec2): Vec2 {
         if (!vector) vector = new Vec2(0, 0);
         let face = this.mesh.getFaceAt(x, y);
         if (face === null) {
             vector.x = 0;
             vector.y = 0;
         } else {
+            // TODO: choose face data from nearest frames and interpolate
             face.interpolate(vector, new Vec2(x, y));
         }
         return vector;
@@ -338,6 +357,12 @@ export interface FieldParameters {
     min_length: number;
     seed_x: number;
     seed_y: number;
+    t_end: number;
+    t_span: number;
+    check_bounds: boolean;
+    check_sep: boolean;
+    check_loops: boolean;
+    tapering: boolean;
     // alpha: number;
     // beta: number;
     // sigma: number;
