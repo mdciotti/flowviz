@@ -3,11 +3,11 @@
 declare class FileSaver {};
 declare function saveAs(data: Blob|File, filename?: string, disableAutoBOM?: boolean): FileSaver;
 
-import { Field, MeshField, FieldOptions, FieldParameters } from "./Field.ts";
-import Point from "./Point.ts";
-import { mapRange, simpleDateTimeString } from "./util.ts";
-import AABB from "./AABB.ts";
-import VectorMesh from "./VectorMesh.ts";
+import { Field, MeshField, FieldOptions, FieldParameters } from "./Field";
+import Point from "./Point";
+import { mapRange, simpleDateTimeString } from "./util";
+import AABB from "./AABB";
+import VectorMesh from "./VectorMesh";
 
 function toWorldX(x, canvas, bounds) {
     return mapRange(x, canvas.offsetLeft, canvas.width, bounds.x - bounds.width / 2, bounds.width);

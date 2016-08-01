@@ -1,8 +1,8 @@
-import Point from "./Point.ts";
-import AABB from "./AABB.ts";
-import NDArray from "./NDArray.ts";
-import Vec2 from "./Vec2.ts"
-import { Streamline, Vertex } from "./Streamline.ts";
+import Point from "./Point";
+import AABB from "./AABB";
+import NDArray from "./NDArray";
+import Vec2 from "./Vec2"
+import { Streamline, Vertex } from "./Streamline";
 
 export class Bin<T> {
     public items: Array<T>;

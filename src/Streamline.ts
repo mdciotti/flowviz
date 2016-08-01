@@ -1,6 +1,6 @@
-import Point from "./Point.ts";
-import Vec2 from "./Vec2.ts";
-import { Field } from "./Field.ts";
+import Point from "./Point";
+import Vec2 from "./Vec2";
+import { Field } from "./Field";
 
 enum Direction {
     FORWARD = 1,

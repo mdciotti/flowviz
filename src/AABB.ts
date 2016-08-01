@@ -1,4 +1,4 @@
-import Point from "./Point.ts";
+import Point from "./Point";
 
 /**
  * An axis-aligned bounding box centered at (x, y).

@@ -1,5 +1,5 @@
-import Vec2 from "./Vec2.ts";
-import Point from "./Point.ts";
+import Vec2 from "./Vec2";
+import Point from "./Point";
 
 export interface Differentiable {
     vec_at(x: number, y: number, v?: Vec2): Vec2;

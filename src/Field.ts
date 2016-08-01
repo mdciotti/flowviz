@@ -1,12 +1,12 @@
-import AABB from "./AABB.ts";
-import BinGrid from "./BinGrid.ts";
-import { Streamline, Vertex } from "./Streamline.ts";
-import Point from "./Point.ts";
-import Vec2 from "./Vec2.ts";
-import { lerp, mapRange } from "./util.ts";
-import FieldFeature from "./FieldFeature.ts";
-import VectorMesh from "./VectorMesh.ts";
-import { Integrator, Differentiable, RungeKutta4 } from "./Integrator.ts";
+import AABB from "./AABB";
+import BinGrid from "./BinGrid";
+import { Streamline, Vertex } from "./Streamline";
+import Point from "./Point";
+import Vec2 from "./Vec2";
+import { lerp, mapRange } from "./util";
+import { FieldFeature, UnsteadyFieldFeature } from "./FieldFeature";
+import VectorMesh from "./VectorMesh";
+import { Integrator, Differentiable, RungeKutta4 } from "./Integrator";
 
 /**
  * Represents a collection of streamlines in a given vector field.
@@ -266,7 +266,7 @@ export class FeatureField extends Field implements Differentiable {
             for (let f of this.features) {
                 let p = new Point(f.x, f.y);
                 p.draw(ctx, 5);
-        }
+            }
         }
         super.draw(ctx, opts);
         ctx.restore();
@@ -276,7 +276,7 @@ export class FeatureField extends Field implements Differentiable {
         let mesh = VectorMesh.create(this.bounds, subdivisions, this.vec_at.bind(this));
         console.log(mesh);
         return new MeshField(this.bounds, mesh);
-}
+    }
 
     public export(): string {
         return "not yet implemented";

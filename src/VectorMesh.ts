@@ -2,12 +2,12 @@
 /// <reference path="../typings/parse-ply.d.ts" />
 /// <reference path="../typings/through.d.ts" />
 
-import AABB from "./AABB.ts";
-import Point from "./Point.ts";
-import Vec2 from "./Vec2.ts";
-import NDArray from "./NDArray.ts";
-import BinGrid from "./BinGrid.ts";
-import { clamp, mapRange } from "./util.ts";
+import AABB from "./AABB";
+import Point from "./Point";
+import Vec2 from "./Vec2";
+import NDArray from "./NDArray";
+import BinGrid from "./BinGrid";
+import { clamp, mapRange } from "./util";
 import PLYParser from "parse-ply";
 import through from "through";
 
