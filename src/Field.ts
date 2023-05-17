@@ -1,6 +1,6 @@
 import AABB from "./AABB";
 import BinGrid from "./BinGrid";
-import { Streamline, Vertex } from "./Streamline";
+import { Streamline, Vertex, Pathline } from "./Streamline";
 import Point from "./Point";
 import Vec2 from "./Vec2";
 import { lerp, mapRange } from "./util";
@@ -52,6 +52,9 @@ export abstract class Field implements Differentiable {
     /** Toggle for line tapering */
     public tapering: boolean = true;
 
+    /** Toggle for seed candidate placement */
+    public enable_candidate_placement;
+
     public integrator: Integrator;
 
     public binGrid: BinGrid<Vertex>;
@@ -59,6 +62,7 @@ export abstract class Field implements Differentiable {
 
     /** The collection of streamlines in this vector field */
     private streamlines: Array<Streamline>;
+    private pathlines: Array<Pathline>;
 
     private seedQueue: Array<Point>;
 
@@ -68,6 +72,8 @@ export abstract class Field implements Differentiable {
     constructor(bounds: AABB) {
         this.initialSeed = new Point(0, 0);
         this.setBounds(bounds);
+        this.streamlines = [];
+        this.pathlines = [];
     }
 
     /**
@@ -87,6 +93,7 @@ export abstract class Field implements Differentiable {
         this.check_sep = params.check_sep;
         this.check_loops = params.check_loops;
         this.tapering = params.tapering;
+        this.enable_candidate_placement = params.candidate_placement;
 
         this.initialSeed.x = mapRange(params.seed_x, -1, 2, this.bounds.x - this.bounds.width / 2, this.bounds.width);
         this.initialSeed.y = mapRange(params.seed_y, -1, 2, this.bounds.y - this.bounds.height / 2, this.bounds.height);
@@ -107,6 +114,7 @@ export abstract class Field implements Differentiable {
         // Set up variables
         this.seedQueue = [this.initialSeed];
         this.streamlines = [];
+        this.pathlines = [];
         this.binGrid.clear();
         this.binGrid2.clear();
     }
@@ -136,7 +144,8 @@ export abstract class Field implements Differentiable {
             return;
 
         this.addStream(streamline);
-        this.generateCandidates(streamline);
+        if (this.enable_candidate_placement)
+            this.generateCandidates(streamline);
     }
 
     /**
@@ -159,6 +168,28 @@ export abstract class Field implements Differentiable {
         while (this.seedQueue.length > 0) {
             this.step();
         }
+        console.log(this.streamlines);
+    }
+
+    /**
+     * Generate the pathlines
+     */
+    public generatePathlines(): void {
+        // TODO: split into nxn samples and forward integrate for each timestep
+        let n = 10;
+        let t_step = 1;
+        let t_end = 10;
+        for (let t = 0; t < t_end; t += t_step) {
+            for (let j = 0; j < n; j++) {
+                let y = this.bounds.top - j * this.bounds.height / n;
+                for (let i = 0; i < n; i++) {
+                    let x = this.bounds.left + i * this.bounds.width / n;
+                    // console.log(x, y);
+                    this.pathlines.push(new Pathline(new Point(x, y), t, this));
+                }
+            }
+        }
+        console.log(this.pathlines);
     }
 
     public viewTransform(ctx: CanvasRenderingContext2D): void {
@@ -192,6 +223,11 @@ export abstract class Field implements Differentiable {
             ctx.save();
             for (let s of this.streamlines) {
                 s.draw(ctx);
+            }
+            console.log(this.pathlines);
+            for (let p of this.pathlines) {
+                // console.log("Drawing pathline", p);
+                p.draw(ctx);
             }
             ctx.restore();
         }
@@ -363,6 +399,7 @@ export interface FieldParameters {
     check_sep: boolean;
     check_loops: boolean;
     tapering: boolean;
+    candidate_placement: boolean;
     // alpha: number;
     // beta: number;
     // sigma: number;

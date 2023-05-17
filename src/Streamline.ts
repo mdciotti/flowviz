@@ -36,8 +36,8 @@ export class Vertex extends Point {
 export class Streamline {
     public arcLength: number = 0;
     public vertices: Array<Vertex> = [];
-    private seed: Vertex;
-    private field: Field;
+    protected seed: Vertex;
+    protected field: Field;
 
     /**
      * Creates a streamline through the specified point.
@@ -113,7 +113,7 @@ export class Streamline {
         ctx.globalAlpha = 1;
     }
 
-    private computeLine(dir: Direction, vertices: Vertex[]): number {
+    protected computeLine(dir: Direction, vertices: Vertex[]): number {
         // Limit maximum iterations to prevent infinite loops
         // This number may need to be adjusted as it will naively truncate long
         // streamlines
@@ -122,7 +122,7 @@ export class Streamline {
         let p1: Vertex = this.seed; // last vertex
         let p0: Vertex = null; // current vertex
 
-        this.field.integrator.t = 0;
+        this.field.integrator.t = this.seed.t;
 
         for (let i = 0; i < MAX_ITER; i++) {
             if (dir === Direction.FORWARD) {
@@ -174,6 +174,23 @@ export class Streamline {
         }
 
         return true;
+    }
+}
+
+export class Pathline extends Streamline {
+    constructor(seed: Point, t: number, field?: Field) {
+        super(seed, field);
+        this.seed.t = t;
+    }
+
+    /**
+     * Computes the path of a pathline given by a point.
+     * Overrides the streamline definition to only compute forward path.
+     */
+    public compute(): void {
+        // Forward computation
+        let fv: Array<Vertex> = [];
+        this.computeLine(Direction.FORWARD, this.vertices);
     }
 }
 

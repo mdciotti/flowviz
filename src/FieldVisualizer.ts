@@ -56,7 +56,8 @@ export default class FieldVisualizer {
         check_bounds: true,
         check_sep: true,
         check_loops: true,
-        tapering: true
+        tapering: true,
+        candidate_placement: true
     };
 
     constructor(f: Field, w: number, h: number) {
@@ -102,13 +103,15 @@ export default class FieldVisualizer {
         params.add(this.parameters, "check_sep").onChange(update);
         params.add(this.parameters, "check_loops").onChange(update);
         params.add(this.parameters, "tapering").onChange(updateDraw);
+        params.add(this.parameters, "candidate_placement");
         // this.gui.add(this, "setViewBounds");
         // this.gui.add(this, "reset");
         this.step = this.stepn(1);
         this.step100 = this.stepn(100);
         this.gui.add(this, "step");
         this.gui.add(this, "step100").name("step x100");
-        this.gui.add(this, "generateStreamlines").name("generate streamlines");
+        this.gui.add(this, "generateStreamlines");
+        this.gui.add(this, "generatePathlines");
         this.gui.add(this, "clear").name("clear streamlines");
         this.gui.add(this, "discretize");
         this.gui.add(this, "export");
@@ -247,6 +250,14 @@ export default class FieldVisualizer {
      */
     public generateStreamlines() {
         this.field.generateStreamlines();
+        this.draw();
+    }
+
+    /**
+     * Generate pathlines for the field.
+     */
+    public generatePathlines() {
+        this.field.generatePathlines();
         this.draw();
     }
 
